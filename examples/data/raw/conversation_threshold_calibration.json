@@ -1,0 +1,14 @@
+{
+  "conversation_id": "CONV_TUNING_001",
+  "task": "Calibrate synthetic algorithm threshold after replacement",
+  "messages": [
+    {"role": "engineer", "content": "The new enhancement algorithm runs, but validation metrics drift because the threshold default changed."},
+    {"role": "agent", "content": "I will inspect configuration defaults and avoid hard-coding hidden calibration values."},
+    {"role": "tool", "name": "read_file", "content": "The public demo config uses enhancement_threshold."},
+    {"role": "tool", "name": "run_runtime_tests", "content": "FAIL: output metric exceeds tolerated drift."},
+    {"role": "engineer", "content": "Keep the tuning parameter explicit and documented."},
+    {"role": "agent", "content": "Expose a documented threshold value in config and validate metric drift."},
+    {"role": "tool", "name": "run_runtime_tests", "content": "PASS: metric drift is within tolerance."}
+  ]
+}
+

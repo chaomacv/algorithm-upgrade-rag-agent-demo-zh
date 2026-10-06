@@ -1,0 +1,46 @@
+{
+  "case_id": "CASE_META_001",
+  "module": "Observability",
+  "task": "Preserve algorithm metadata contract after module replacement",
+  "old_algorithm": "MetadataAwareAlgorithm",
+  "new_algorithm": "ImageOnlyAlgorithm",
+  "constraints": {
+    "interface": [
+      "Runtime output must include metadata.algorithm",
+      "Algorithm switch validation depends on observable metadata"
+    ],
+    "engineering": [
+      "Do not declare success without runtime evidence"
+    ]
+  },
+  "steps": [
+    "Inspect metadata contract",
+    "Run runtime validation",
+    "Add adapter metadata",
+    "Verify metadata.algorithm reports the active algorithm"
+  ],
+  "problems": [
+    {
+      "stage": "runtime validation",
+      "symptom": "metadata.algorithm missing",
+      "root_cause": "New algorithm output omitted observability metadata"
+    }
+  ],
+  "solutions": [
+    {
+      "problem": "missing metadata",
+      "solution": "Add adapter logic that preserves metadata.algorithm for switch validation"
+    }
+  ],
+  "validation": {
+    "runtime": "passed",
+    "algorithm_switch": "passed"
+  },
+  "final_status": "success",
+  "reusable_experience": [
+    "Runtime success is incomplete if the active algorithm cannot be observed",
+    "Keep metadata contracts explicit during replacement"
+  ],
+  "source_conversation_id": "CONV_META_001"
+}
+

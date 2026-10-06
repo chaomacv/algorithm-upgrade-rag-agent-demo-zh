@@ -1,0 +1,32 @@
+{
+  "case_id": "CASE_RUNTIME_001",
+  "module": "Runtime",
+  "task": "Fix runtime crash after algorithm replacement",
+  "old_algorithm": null,
+  "new_algorithm": null,
+  "constraints": {
+    "runtime": ["Use generic public dependency names only"],
+    "engineering": ["Do not encode environment-specific paths"]
+  },
+  "steps": ["Inspect runtime error", "Compare dependency versions", "Align generic library version"],
+  "problems": [
+    {
+      "stage": "runtime validation",
+      "symptom": "Application crashed after algorithm replacement",
+      "root_cause": "Runtime dependency mismatch"
+    }
+  ],
+  "solutions": [
+    {
+      "problem": "dependency mismatch",
+      "solution": "Align environment/library version in the public demo environment"
+    }
+  ],
+  "validation": {
+    "runtime": "passed"
+  },
+  "final_status": "success",
+  "reusable_experience": ["Runtime failures may come from environment mismatch rather than code logic"],
+  "source_conversation_id": "CONV_RUNTIME_001"
+}
+

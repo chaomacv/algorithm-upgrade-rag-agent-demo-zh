@@ -1,0 +1,5 @@
+numpy
+pydantic
+rich
+pytest
+

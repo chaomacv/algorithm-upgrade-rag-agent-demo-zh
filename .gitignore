@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Local secrets
+.env
+password.txt
+
+# Generated demo artifacts
+outputs/
+runs/
+index/
+
+# Model/cache artifacts
+*.index
+*.npy
+metadata.json
+

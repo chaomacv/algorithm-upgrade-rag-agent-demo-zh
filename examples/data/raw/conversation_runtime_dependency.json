@@ -1,0 +1,14 @@
+{
+  "conversation_id": "CONV_RUNTIME_001",
+  "task": "Resolve runtime dependency mismatch after algorithm replacement",
+  "messages": [
+    {"role": "engineer", "content": "The replacement compiles, but the application crashes at runtime with a generic library compatibility error."},
+    {"role": "agent", "content": "I will separate code integration failures from environment dependency failures."},
+    {"role": "tool", "name": "run_build_check", "content": "PASS: source files compile."},
+    {"role": "tool", "name": "run_runtime_tests", "content": "FAIL: runtime dependency version mismatch."},
+    {"role": "engineer", "content": "Do not encode machine-specific paths or private package names."},
+    {"role": "agent", "content": "Use public generic dependency names and align the demo runtime library version."},
+    {"role": "tool", "name": "run_runtime_tests", "content": "PASS: runtime no longer crashes."}
+  ]
+}
+

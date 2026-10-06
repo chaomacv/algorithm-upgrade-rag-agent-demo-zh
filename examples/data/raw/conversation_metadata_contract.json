@@ -1,0 +1,14 @@
+{
+  "conversation_id": "CONV_META_001",
+  "task": "Preserve algorithm metadata contract after module replacement",
+  "messages": [
+    {"role": "engineer", "content": "The new algorithm produces an image, but monitoring cannot identify which algorithm was active."},
+    {"role": "agent", "content": "I will inspect the metadata contract used by validation and observability."},
+    {"role": "tool", "name": "read_file", "content": "Validation expects result.metadata.algorithm to be present."},
+    {"role": "tool", "name": "run_runtime_tests", "content": "FAIL: metadata.algorithm missing from output."},
+    {"role": "engineer", "content": "Do not declare success unless runtime evidence identifies the active algorithm."},
+    {"role": "agent", "content": "Add adapter metadata so metadata.algorithm is preserved for switch validation."},
+    {"role": "tool", "name": "verify_algorithm_switch", "content": "PASS: metadata.algorithm reports the new algorithm."}
+  ]
+}
+

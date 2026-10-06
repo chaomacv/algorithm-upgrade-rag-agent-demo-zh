@@ -1,0 +1,8 @@
+numpy
+pydantic
+rich
+pytest
+faiss-cpu
+FlagEmbedding
+torch
+

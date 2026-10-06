@@ -1,0 +1,33 @@
+{
+  "case_id": "CASE_DRE_002",
+  "module": "DRE",
+  "task": "Fix image layout mismatch after DRE algorithm upgrade",
+  "old_algorithm": "GenericDRE",
+  "new_algorithm": "LayoutAwareDRE",
+  "constraints": {
+    "interface": ["Downstream expects CHW tensor layout"],
+    "engineering": ["Keep the layout adapter isolated"]
+  },
+  "steps": ["Inspect tensor shape", "Add layout adapter", "Run runtime validation"],
+  "problems": [
+    {
+      "stage": "runtime validation",
+      "symptom": "Image shape mismatch",
+      "root_cause": "New algorithm returns HWC while downstream expects CHW"
+    }
+  ],
+  "solutions": [
+    {
+      "problem": "layout mismatch",
+      "solution": "Add tensor layout adapter before downstream processing"
+    }
+  ],
+  "validation": {
+    "interface": "passed",
+    "runtime": "passed"
+  },
+  "final_status": "success",
+  "reusable_experience": ["Compare old and new tensor layout before switching algorithms"],
+  "source_conversation_id": "CONV_DRE_002"
+}
+
