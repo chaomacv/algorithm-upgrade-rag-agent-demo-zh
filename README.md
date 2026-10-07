@@ -1,3 +1,10 @@
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/readme-banner-dark.svg">
+    <img src="assets/readme-banner-light.svg" alt="RAG Planning Pipeline：让历史经验驱动规划、执行与验证。运行演示：bash scripts/run_demo.sh" width="1200">
+  </picture>
+</p>
+
 # 可配置 RAG Planning Pipeline
 
 这是一个轻量、可替换模型的 RAG Planning 项目。用户可以放入自己的历史对话或结构化 Case，
