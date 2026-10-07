@@ -29,6 +29,7 @@ def build_index(provider_name: str = "mock") -> Tuple[int, int, int]:
 
 def build_index_from_cases(
     provider_name: str = "mock",
+    embedding_model: str = None,
     case_dir: Path = CASE_DIR,
     knowledge_dir: Path = KNOWLEDGE_DIR,
     index_dir: Path = INDEX_DIR,
@@ -36,7 +37,7 @@ def build_index_from_cases(
     """Build chunks, embeddings, and an index from a caller-selected case directory."""
     # Custom runs pass their own case, knowledge, and index directories here so
     # generated artifacts stay separate from the bundled teaching demo.
-    provider = get_embedding_provider(provider_name)
+    provider = get_embedding_provider(provider_name, model_name=embedding_model)
     cases = load_cases(case_dir)
     if not cases:
         raise ValueError(f"No CASE_*.json files found in {case_dir}")

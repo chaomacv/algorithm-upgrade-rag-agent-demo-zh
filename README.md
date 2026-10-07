@@ -1,107 +1,158 @@
-# 算法升级 RAG Agent Demo
+# 可配置 RAG Planning Pipeline
 
-这是一个中文教学版工程示例，用来展示如何把历史工程对话沉淀为结构化 Case，再通过 RAG 检索、Planner 规划、Executor 执行和验证闭环，辅助完成复杂算法模块替换任务。
-
-项目中的代码、数据、日志和配置均为合成示例，不包含真实业务数据或公司内部信息。
-
-## 一句话理解
-
-这个项目演示的是：
+这是一个轻量、可替换模型的 RAG Planning 项目。用户可以放入自己的历史对话或结构化 Case，选择 LLM Planner 和 Embedding 模型，然后自动完成：
 
 ```text
-历史对话
--> 结构化 Case
+历史对话 / 结构化 Case
+-> Case 抽取
 -> Schema 对齐的 Chunk
--> 向量索引
--> RAG 检索
--> Planner 生成计划
--> Executor 受控执行
--> Validation 验证
--> 失败后再次检索并修复
+-> Embedding
+-> Vector Index
+-> Query Retrieval
+-> LLM Planner
+-> Prompt / Plan / Report
 ```
 
-示例场景是“复杂算法模块系统中的单模块算法替换”：把旧的 `OldDRE` 替换成新的 `NewLLF`，同时保持下游接口兼容。
+默认推荐组合是：
+
+```text
+DeepSeek Planner + BAAI/bge-m3 Embedding
+```
+
+同时也保留接口，方便替换成其他 OpenAI-compatible LLM 或其他 embedding provider。
 
 ## 快速开始
 
-低门槛教学版不需要 DeepSeek、不需要 BGE-M3、不需要网络：
+离线 smoke test，不需要 API key，也不下载模型：
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements-lite.txt
-bash scripts/run_teaching_demo.sh
+python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json run \
+  --case-dir examples/custom_data/cases \
+  --task-file examples/custom_data/task.txt \
+  --repository-facts examples/custom_data/repository_facts.txt \
+  --embedding-provider mock \
+  --offline
 ```
 
-运行成功后会看到完整闭环：
-
-```text
-历史 Case -> RAG 检索 -> Planner -> Executor
--> 验证失败 -> 错误再检索 -> 修复计划 -> 再执行 -> SUCCESS
-```
-
-如果你想用自己的结构化 Case 跑通“检索 + 规划 + 报告”链路：
+真实 DeepSeek + BGE-M3：
 
 ```bash
-python -m algo_rag_demo.cli run-custom \
+pip install -r requirements.txt
+source ./load_deepseek_env.sh
+python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json run \
   --case-dir examples/custom_data/cases \
   --task-file examples/custom_data/task.txt \
   --repository-facts examples/custom_data/repository_facts.txt
 ```
 
+每次运行都会生成：
+
+```text
+outputs/runs/<timestamp>-rag-plan/
+  task.json
+  retrieval.json
+  prompt.md
+  plan.json
+  final_report.json
+  knowledge/chunks.json
+  index/cases.index
+  index/metadata.json
+```
+
+## 自定义数据
+
+最小输入结构：
+
+```text
+my_data/
+  cases/
+    CASE_001.json
+  task.txt
+  repository_facts.txt
+```
+
+运行：
+
+```bash
+python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json run \
+  --case-dir my_data/cases \
+  --task-file my_data/task.txt \
+  --repository-facts my_data/repository_facts.txt
+```
+
+如果你有原始历史对话，可以先让 LLM 抽取结构化 Case：
+
+```bash
+python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json extract-cases \
+  --raw-dir my_data/raw \
+  --case-dir my_data/cases
+```
+
+## 模型切换
+
+LLM 配置在 `configs/*.json`：
+
+```json
+{
+  "llm": {
+    "provider": "deepseek",
+    "base_url": "https://api.deepseek.com",
+    "api_key_env": "DEEPSEEK_API_KEY",
+    "model": "deepseek-flash"
+  }
+}
+```
+
+换成其他 OpenAI-compatible 服务时，只需要改：
+
+```text
+base_url
+api_key_env
+model
+```
+
+Embedding 配置：
+
+```json
+{
+  "embedding": {
+    "provider": "bge-m3",
+    "model": "BAAI/bge-m3"
+  }
+}
+```
+
+当前内置：
+
+- `bge-m3`：真实语义向量，默认模型 `BAAI/bge-m3`
+- `mock`：离线测试用确定性向量
+
 ## 文档导航
 
-| 模块 | 适合读者 | 内容 |
-| --- | --- | --- |
-| [项目背景与问题](docs/project_overview.md) | 第一次了解项目的人 | 为什么算法替换会失败，示例场景是什么 |
-| [Teaching Demo](docs/01_teaching_demo.md) | 想快速跑通的人 | 无 API、无网络的一键演示 |
-| [DeepSeek + BGE-M3](docs/02_live_deepseek_bge.md) | 想接真实模型的人 | DeepSeek Planner 和 BGE-M3 Embedding |
-| [自定义实战入口](docs/03_architecture_for_reuse.md) | 想放入自己数据直接跑的人 | 自定义 Case、任务、检索、计划和报告 |
-| [Case 与 Chunk](docs/case_schema.md) | 关注知识结构的人 | Case Schema 和 Chunk 设计 |
-| [RAG Pipeline](docs/rag_pipeline.md) | 关注检索链路的人 | 从 chunk 到 index 再到 retrieval |
-| [命令手册](docs/commands.md) | 需要实际操作的人 | 构建索引、搜索、运行 demo、DeepSeek 抽取 |
-| [运行产物](docs/run_artifacts.md) | 需要展示结果的人 | `outputs/runs/` 下每个文件怎么看 |
+| 文档 | 内容 |
+| --- | --- |
+| [自定义数据到 Case](docs/03_architecture_for_reuse.md) | 如何设计自己的历史对话和结构化 Case |
+| [Case Schema](docs/case_schema.md) | `EngineeringCase` 字段含义 |
+| [RAG Pipeline](docs/rag_pipeline.md) | Chunk、Embedding、Index、Retrieval |
+| [命令手册](docs/commands.md) | CLI 命令和配置示例 |
+| [架构概览](docs/architecture.md) | 模块边界和接口 |
 
 ## 项目目录
 
 ```text
-algo_rag_demo/      核心代码：Case pipeline、RAG、Agent、CLI
-examples/           示例数据、示例工程、示例 Skill
-docs/               详细说明文档
-scripts/            一键运行脚本
-tests/              单元测试和流程测试
-outputs/            生成的索引和运行日志，不提交到 GitHub
+algo_rag_demo/
+  agent/          LLM provider 和 Planner
+  case_pipeline/  Conversation -> Case -> Chunk
+  rag/            Embedding、Index、Retrieval、Prompt
+configs/          LLM 和 Embedding 配置
+examples/         用户数据模板
+scripts/          一键运行脚本
+tests/            核心接口测试
 ```
 
-## 文件怎么读
+## 安全说明
 
-如果只是想看懂项目，先读 `README.md` 和 `docs/`。如果想放入自己的数据，直接看 `examples/custom_data/` 和 `docs/03_architecture_for_reuse.md`。如果想改代码能力，再进入 `algo_rag_demo/`。
-
-## 两条使用路线
-
-教学讲解优先看：
-
-```text
-README
--> docs/project_overview.md
--> docs/01_teaching_demo.md
--> docs/run_artifacts.md
-```
-
-工程复用优先看：
-
-```text
-README
--> docs/03_architecture_for_reuse.md
--> examples/custom_data/
--> docs/case_schema.md
--> docs/rag_pipeline.md
--> CONTRIBUTING.md
-```
-
-## GitHub 模块
-
-- [Contributing](CONTRIBUTING.md)：如何贡献 case、文档、执行器和测试。
-- [Code of Conduct](CODE_OF_CONDUCT.md)：协作规范。
-- [Security](SECURITY.md)：密钥、数据和安全边界说明。
-- [MIT License](LICENSE)：开源许可证。
+不要提交 API key、真实内部日志、客户数据或未脱敏对话。`password.txt`、`.env`、`outputs/`、索引产物和缓存已经被 `.gitignore` 排除。

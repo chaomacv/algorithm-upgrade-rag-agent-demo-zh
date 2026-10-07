@@ -1,80 +1,39 @@
-# 自定义实战入口
+# 自定义数据到 Case
 
-这一页替代原来的“复用架构”说明，重点回答一个问题：
-
-```text
-别人能不能把自己的数据放进来，然后直接跑通一条完整链路？
-```
-
-现在可以。入口是：
-
-```bash
-bash scripts/run_custom_demo.sh
-```
-
-或者直接使用 CLI：
-
-```bash
-python -m algo_rag_demo.cli run-custom \
-  --case-dir examples/custom_data/cases \
-  --task-file examples/custom_data/task.txt \
-  --repository-facts examples/custom_data/repository_facts.txt \
-  --provider mock \
-  --planner evidence \
-  --top-k 3
-```
-
-## 它会跑哪些步骤
-
-`run-custom` 跑的是通用实战链路：
+这个项目的核心不是固定示例，而是一条可复用链路：
 
 ```text
-用户 Case
+你的历史对话
+-> 结构化 EngineeringCase
 -> Schema 对齐的 Chunk
--> Chunk Text Embedding
--> Run-local Vector Index
--> Query Retrieval
--> Prompt Builder
--> Evidence Planner
--> Prompt / Plan / Report
+-> Embedding
+-> Vector Index
+-> Retrieval
+-> LLM Planner
+-> Plan / Report
 ```
 
-它默认是 `custom_dry_run`，也就是只生成检索证据、提示词、计划和报告，不直接修改用户项目。
+## 方式一：直接写结构化 Case
 
-这个设计是刻意的：不同真实项目的文件结构、测试命令、patch 策略都不一样。如果直接复用 DRE 教学 Demo 的 Executor，反而容易误导读者，以为通用入口会安全地修改任意工程。
-
-## 最小数据结构
-
-你可以参考：
+最稳定的方式是直接准备 `CASE_*.json`：
 
 ```text
-examples/custom_data/
-  README.md
+my_data/
+  cases/
+    CASE_001.json
   task.txt
   repository_facts.txt
-  cases/
-    CASE_CUSTOM_001.json
 ```
 
-其中最关键的是：
-
-- `task.txt`：当前要解决的问题。
-- `repository_facts.txt`：当前项目的事实说明，可选但推荐。
-- `cases/CASE_*.json`：历史经验 Case。
-
-这三个文件就是自定义实战入口的最小输入。项目会在每次运行时生成独立的 `outputs/runs/<timestamp>-custom/`，所以你可以反复试不同任务和不同 Case，不会覆盖原始数据。
-
-## Case 文件格式
-
-每个 `CASE_*.json` 都应该符合 `EngineeringCase`：
+最小 Case 示例：
 
 ```json
 {
-  "case_id": "CASE_CUSTOM_001",
+  "case_id": "CASE_001",
   "module": "Ranking",
-  "task": "Replace legacy ranking module with a new scoring module",
-  "old_algorithm": "LegacyRanker",
-  "new_algorithm": "NeuralScorer",
+  "task": "Replace old ranking algorithm with a new scorer",
+  "old_algorithm": "OldRanker",
+  "new_algorithm": "NewScorer",
   "constraints": {
     "interface": ["Keep downstream metadata schema stable"],
     "engineering": ["Keep rollback path available"]
@@ -84,13 +43,13 @@ examples/custom_data/
     {
       "stage": "first replacement",
       "symptom": "metadata.reason is missing",
-      "root_cause": "The new scorer returned a different metadata shape"
+      "root_cause": "new scorer changed output schema"
     }
   ],
   "solutions": [
     {
       "problem": "metadata schema mismatch",
-      "solution": "Add an adapter that preserves the metadata contract"
+      "solution": "add adapter preserving required metadata"
     }
   ],
   "validation": {
@@ -100,98 +59,99 @@ examples/custom_data/
   },
   "final_status": "success",
   "reusable_experience": [
-    "Treat metadata schema compatibility as part of the public interface"
+    "Treat output metadata as public interface",
+    "Verify runtime evidence before declaring replacement complete"
   ],
-  "source_conversation_id": "CONV_CUSTOM_001"
+  "source_conversation_id": "CONV_001"
 }
 ```
 
-## 运行结果在哪里
-
-每次运行都会生成一个目录：
-
-```text
-outputs/runs/<timestamp>-custom/
-```
-
-里面包含：
-
-```text
-task.json
-retrieval.json
-plan.json
-prompt.md
-final_report.json
-knowledge/chunks.json
-index/cases.index
-index/metadata.json
-```
-
-其中：
-
-- `retrieval.json`：本次任务命中的历史 Chunk。
-- `prompt.md`：拼给 Planner 的完整提示词。
-- `plan.json`：Planner 生成的计划。
-- `final_report.json`：本次运行摘要。
-- `knowledge/chunks.json`：从用户 Case 生成的 Chunk。
-- `index/`：本次运行独立生成的向量索引。
-
-## 使用自己的数据
-
-最简单的方式：
-
-1. 复制 `examples/custom_data/`。
-2. 替换 `cases/CASE_CUSTOM_001.json`。
-3. 修改 `task.txt`。
-4. 修改 `repository_facts.txt`。
-5. 运行 `run-custom`。
-
-示例：
+运行：
 
 ```bash
-python -m algo_rag_demo.cli run-custom \
+python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json run \
   --case-dir my_data/cases \
   --task-file my_data/task.txt \
   --repository-facts my_data/repository_facts.txt
 ```
 
-如果你已经有原始对话，也可以让 DeepSeek 先抽取 Case：
+## 方式二：从历史对话自动抽取 Case
+
+如果你有历史对话，先整理成：
+
+```json
+{
+  "conversation_id": "CONV_001",
+  "task": "Replace old ranking algorithm with a new scorer",
+  "messages": [
+    {"role": "engineer", "content": "We need to replace OldRanker with NewScorer."},
+    {"role": "agent", "content": "I will inspect the output schema first."},
+    {"role": "tool", "name": "test", "content": "FAIL: metadata.reason is missing."},
+    {"role": "agent", "content": "The new scorer changed the metadata schema, so we need an adapter."}
+  ]
+}
+```
+
+然后运行：
 
 ```bash
-source ./load_deepseek_env.sh
-python -m algo_rag_demo.cli run-custom \
+python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json extract-cases \
   --raw-dir my_data/raw \
-  --extractor deepseek \
-  --task-file my_data/task.txt \
-  --planner deepseek
+  --case-dir my_data/cases
 ```
 
-抽取出来的 Case 会写到本次 run 目录下，不会覆盖你的原始数据。
+抽取使用配置文件里的 LLM provider。默认配置是 DeepSeek，但只要服务兼容 OpenAI Chat Completions，就可以通过 `configs/*.json` 替换。
 
-## 什么时候需要自己改代码
+## repository_facts 怎么写
 
-`run-custom` 解决的是：
+`repository_facts.txt` 用来告诉 Planner 当前项目事实，例如：
 
 ```text
-我的历史数据能不能进入 RAG
-我的任务能不能检索到相关经验
-Planner 能不能生成可读计划
-产物能不能被审计和展示
+- Ranking module path: src/ranking/
+- Config path: config/pipeline.json
+- Normal test command: pytest tests/ranking -q
+- Runtime evidence should include metadata.algorithm == "new_scorer"
+- Rollback can switch config back to old_ranker
 ```
 
-如果你想让 Agent 真的修改自己的工程，还需要实现项目专属执行器：
-
-- 修改或新增 `ToolRegistry`。
-- 定义允许读写的目录。
-- 定义安全 patch 模板。
-- 定义真实测试命令。
-- 定义 rollback 策略。
-
-教学 Demo 的执行器在：
+它不是历史经验，而是当前仓库事实。Planner 会同时参考：
 
 ```text
-algo_rag_demo/agent/executor.py
-algo_rag_demo/agent/tool_registry.py
+当前任务 + 当前仓库事实 + 检索到的历史 Case
 ```
 
-它可以作为参考，但不要直接假设它适用于任意项目。
+## 运行后如何看结果
+
+每次运行会生成：
+
+```text
+outputs/runs/<timestamp>-rag-plan/
+  task.json
+  retrieval.json
+  prompt.md
+  plan.json
+  final_report.json
+  knowledge/chunks.json
+  index/
+```
+
+重点看：
+
+- `retrieval.json`：检索排序是否正确。
+- `prompt.md`：最终给 Planner 的上下文。
+- `plan.json`：LLM 生成的工程计划。
+- `knowledge/chunks.json`：Case 被切成了哪些检索单元。
+
+## 自动适配的边界
+
+项目会自动适配：
+
+- 用户自己的 `CASE_*.json`
+- 用户自己的 `task.txt`
+- 用户自己的 `repository_facts.txt`
+- LLM provider
+- embedding provider
+- index 输出目录
+- run artifact 输出目录
+
+项目不会默认修改你的代码仓库。原因是不同项目的文件结构、测试命令、patch 策略和回滚机制都不同。这个仓库产出的是 RAG-backed plan，后续执行层应该由具体项目单独实现。

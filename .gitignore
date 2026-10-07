@@ -7,7 +7,7 @@ __pycache__/
 .env
 password.txt
 
-# Generated demo artifacts
+# Generated pipeline artifacts
 outputs/
 runs/
 index/

@@ -1,0 +1,20 @@
+{
+  "llm": {
+    "provider": "deepseek",
+    "base_url": "https://api.deepseek.com",
+    "api_key_env": "DEEPSEEK_API_KEY",
+    "model": "deepseek-flash",
+    "timeout": 60,
+    "verify_ssl": true
+  },
+  "embedding": {
+    "provider": "bge-m3",
+    "model": "BAAI/bge-m3"
+  },
+  "retrieval": {
+    "top_k": 5
+  },
+  "paths": {
+    "case_dir": "examples/custom_data/cases"
+  }
+}

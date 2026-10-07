@@ -1,0 +1,37 @@
+{
+  "conversation_id": "CONV_CUSTOM_001",
+  "task": "Replace legacy ranking module with a new scoring module",
+  "messages": [
+    {
+      "role": "user",
+      "content": "We need to replace LegacyRanker with NeuralScorer, but downstream services still expect the same metadata fields."
+    },
+    {
+      "role": "assistant",
+      "content": "I will compare the old and new output schemas before switching the active algorithm."
+    },
+    {
+      "role": "tool",
+      "name": "schema_check",
+      "content": "FAIL: metadata.reason is missing from NeuralScorer output."
+    },
+    {
+      "role": "assistant",
+      "content": "The new scorer changed the metadata shape. Add an adapter that preserves confidence and reason for downstream consumers."
+    },
+    {
+      "role": "tool",
+      "name": "runtime_check",
+      "content": "FAIL: runtime evidence still reports LegacyRanker."
+    },
+    {
+      "role": "assistant",
+      "content": "The configuration switch was not updated. Change the active algorithm config and verify runtime metadata reports NeuralScorer."
+    },
+    {
+      "role": "tool",
+      "name": "validation",
+      "content": "PASS: interface, runtime, configuration, and rollback checks passed."
+    }
+  ]
+}

@@ -1,73 +1,55 @@
-# 项目背景与问题
+# 项目概览
 
-复杂算法升级经常不是“改一个文件”就能完成。失败原因往往藏在下游接口、配置开关、验证标准、运行时依赖和回滚要求里。
+这个仓库是一个可配置的 RAG Planning Pipeline。它适合把历史工程经验整理成结构化 Case，然后在新任务到来时检索相似经验，并交给 LLM 生成可审查的工程计划。
 
-这个 Demo 用一个简化场景说明：
+默认推荐组合：
 
 ```text
-Input Image -> PreProcess -> DRE -> ColorTransform -> Output
+DeepSeek Planner + BAAI/bge-m3 Embedding
 ```
 
-旧算法 `OldDRE` 返回：
-
-```python
-{"image": ..., "residual_map": ..., "metadata": ...}
-```
-
-新算法 `NewLLF` 初始只返回：
-
-```python
-{"image": ..., "metadata": ...}
-```
-
-但下游 `ColorTransform` 仍然依赖 `residual_map`，所以 Agent 不能直接替换算法，而应该增加兼容适配层。
+但这两个部分都不是写死的。LLM 可以替换为其他 OpenAI-compatible 服务，embedding 也可以替换为其他 provider。
 
 ## 完整链路
 
 ```text
 历史对话
--> LLM/规则抽取
--> 结构化 Case
+-> LLM 抽取
+-> 结构化 EngineeringCase
 -> Schema 对齐的 Chunk
 -> Chunk Text Embedding
 -> Vector Index
 -> Query Retrieval
+-> 回溯 Case 和原始 Conversation
 -> Prompt Builder
--> Planner 生成计划
--> Executor 执行
--> Validation 验证
--> 失败后用错误信息再次检索
--> 修复计划
--> 再执行
--> 成功或回滚
+-> LLM Planner
+-> Plan / Report
 ```
 
-## 架构图
+如果用户已经有结构化 Case，可以从 `EngineeringCase` 直接开始，不必经过历史对话抽取。
 
-```mermaid
-flowchart TD
-  A[历史工程对话] --> B[Case 抽取]
-  B --> C[结构化 EngineeringCase]
-  C --> D[语义 Chunk]
-  D --> E[BGE-M3 或 Mock Embedding]
-  E --> F[FAISS 兼容向量索引]
-  G[新的工程任务] --> H[Query Embedding]
-  H --> F
-  F --> I[Top-K 历史案例]
-  I --> J[Prompt Builder]
-  K[算法替换 Skill] --> J
-  L[当前仓库事实] --> J
-  J --> M[Planner]
-  M --> N[受控 Executor]
-  N --> O[Validation]
-  O -->|通过| P[Final Report]
-  O -->|失败| Q[错误分析]
-  Q --> F
-  Q --> R[修复或回滚]
+## 核心产物
+
+一次运行会生成：
+
+```text
+outputs/runs/<timestamp>-rag-plan/
+  task.json
+  retrieval.json
+  prompt.md
+  plan.json
+  final_report.json
+  knowledge/chunks.json
+  index/
 ```
 
-## 为什么不是简单搜索
+这些文件用于回答四个问题：
 
-原始历史对话里会有试错、重复上下文和临时错误结论。项目先把对话整理成统一的 `EngineeringCase`，再按固定 Schema 切成 `task`、`constraint`、`solution` 三类 Chunk。
+- `retrieval.json`：检索到了什么，排序是否合理。
+- `prompt.md`：LLM 看到了哪些上下文。
+- `plan.json`：LLM 给出的计划是什么。
+- `final_report.json`：本次运行使用了哪些输入、索引和知识产物。
 
-这样做的好处是：检索时不是把整段聊天粗暴向量化，而是让每个 Chunk 对齐工程知识点。查询“接口缺字段”时更容易命中 `constraint` 或 `solution`，查询“要替换算法”时更容易命中 `task`。
+## 自带示例的定位
+
+仓库里的示例以“复杂算法模块系统中的单模块算法替换”为背景，只是为了提供一个具体数据样板。项目代码本身不绑定这个场景，换成调度、推荐、风控、数据治理、配置迁移等工程问题也可以沿用同一套 schema 和接口。

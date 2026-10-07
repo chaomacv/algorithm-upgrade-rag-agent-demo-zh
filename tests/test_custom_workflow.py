@@ -32,5 +32,5 @@ def test_custom_case_builds_index_and_plan():
         assert results[0].case_id == "CASE_CUSTOM_001"
 
         plan = EvidencePlanner().plan(task, results)
-        assert plan["task_understanding"]["mode"] == "custom_dry_run"
-        assert plan["executable_plan"]["steps"][0]["type"] == "dry_run"
+        assert plan["task_understanding"]["mode"] == "evidence_only"
+        assert "validation_plan" in plan

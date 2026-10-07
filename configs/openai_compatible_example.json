@@ -1,0 +1,20 @@
+{
+  "llm": {
+    "provider": "openai-compatible",
+    "base_url": "https://api.example.com",
+    "api_key_env": "OPENAI_COMPATIBLE_API_KEY",
+    "model": "your-chat-model",
+    "timeout": 60,
+    "verify_ssl": true
+  },
+  "embedding": {
+    "provider": "bge-m3",
+    "model": "BAAI/bge-m3"
+  },
+  "retrieval": {
+    "top_k": 5
+  },
+  "paths": {
+    "case_dir": "examples/custom_data/cases"
+  }
+}

@@ -1,17 +1,17 @@
 # Contributing
 
-欢迎基于这个项目补充新的 Case、Demo 场景、文档或执行器能力。这个仓库的目标是保持“能讲清楚、能跑通、能复用”。
+欢迎基于这个项目补充新的 Case、文档、模型 provider 或检索能力。这个仓库的目标是保持“数据接口清楚、模型可替换、运行链路可复现”。
 
 ## 贡献方向
 
 推荐从这些方向开始：
 
-- 新增历史对话样例：放到 `examples/data/raw/`。
-- 新增结构化 Case：放到 `examples/data/cases/`。
+- 新增历史对话样例：放到 `examples/custom_data/raw/`。
+- 新增结构化 Case：放到 `examples/custom_data/cases/`。
 - 改进 Chunk 设计：修改 `algo_rag_demo/case_pipeline/chunker.py`。
 - 增加检索或排序测试：放到 `tests/`。
-- 增加新的教学场景：放到 `algo_rag_demo/demo_scenarios/`。
-- 改进执行和验证逻辑：关注 `algo_rag_demo/agent/executor.py` 和 `algo_rag_demo/agent/tool_registry.py`。
+- 增加 LLM provider：关注 `algo_rag_demo/agent/llm_provider.py`。
+- 增加 embedding provider：关注 `algo_rag_demo/rag/embedding.py`。
 
 ## 本地验证
 
@@ -19,13 +19,13 @@
 
 ```bash
 python -m pytest -q
-bash scripts/run_teaching_demo.sh
+bash scripts/run_pipeline_offline.sh
 ```
 
 如果改动了 BGE-M3 或 DeepSeek 集成，再运行：
 
 ```bash
-bash scripts/run_live_demo.sh
+bash scripts/run_pipeline_deepseek_bge.sh
 ```
 
 ## 数据要求

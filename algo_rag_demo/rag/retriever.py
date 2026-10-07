@@ -14,6 +14,7 @@ class Retriever:
         self,
         index_dir: Path = INDEX_DIR,
         provider_name: str = "mock",
+        embedding_model: str = None,
         case_dir: Path = CASE_DIR,
     ) -> None:
         """Load the vector index, metadata, and query embedding provider."""
@@ -21,7 +22,7 @@ class Retriever:
         self.index_dir = index_dir
         # case_dir is stored so custom runs can point results back to user data.
         self.case_dir = case_dir
-        self.provider = get_embedding_provider(provider_name)
+        self.provider = get_embedding_provider(provider_name, model_name=embedding_model)
         self.metadata = read_json(index_dir / "metadata.json")
         self.index = self._load_index()
 

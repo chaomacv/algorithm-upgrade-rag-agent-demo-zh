@@ -1,2 +1,2 @@
-"""Agent planning and execution."""
+"""Agent planning interfaces and LLM providers."""
 

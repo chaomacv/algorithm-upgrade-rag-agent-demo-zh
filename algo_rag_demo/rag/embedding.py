@@ -16,7 +16,7 @@ class EmbeddingProvider(Protocol):
 
 
 class MockEmbeddingProvider:
-    """Deterministic embedding for tests and offline demos.
+    """Deterministic embedding for tests and offline smoke runs.
 
     It combines keyword features with hash features. This is intentionally not a
     semantic embedding model; it only makes the demo reproducible without a model
@@ -27,35 +27,37 @@ class MockEmbeddingProvider:
         """Create deterministic keyword/hash feature space."""
         self.dimension = dimension
         self.keywords = [
-            "dre",
-            "old_dre",
-            "newllf",
-            "new_llf",
+            "algorithm",
+            "module",
+            "ranking",
+            "ranker",
+            "scorer",
+            "legacyranker",
+            "neuralscorer",
             "interface",
             "downstream",
             "compatible",
             "compatibility",
-            "residual_map",
+            "schema",
+            "contract",
             "runtime",
             "config",
             "rollback",
             "shape",
-            "layout",
             "dependency",
             "version",
             "switch",
             "metadata",
+            "confidence",
+            "reason",
             "observability",
             "configuration",
-            "pipeline_json",
-            "shape",
-            "hwc",
-            "chw",
-            "calibration",
-            "threshold",
-            "metric",
-            "drift",
-            "quality",
+            "validation",
+            "adapter",
+            "evidence",
+            "root_cause",
+            "solution",
+            "migration",
         ]
 
     def encode_documents(self, texts: List[str]) -> np.ndarray:
@@ -71,7 +73,7 @@ class MockEmbeddingProvider:
         """Build a normalized keyword/hash vector for one text."""
         # Keyword dimensions make demo ranking understandable and stable.
         vector = np.zeros(self.dimension, dtype="float32")
-        normalized = text.lower().replace("-", "_").replace("pipeline.json", "pipeline_json")
+        normalized = text.lower().replace("-", "_")
         for idx, keyword in enumerate(self.keywords):
             if keyword in normalized:
                 vector[idx] += 5.0
@@ -149,11 +151,11 @@ class BgeM3EmbeddingProvider:
         return vectors / norms
 
 
-def get_embedding_provider(name: str = "mock") -> EmbeddingProvider:
+def get_embedding_provider(name: str = "mock", model_name: str = None) -> EmbeddingProvider:
     """Select the configured embedding provider by name."""
     # Keep provider selection centralized for CLI and retriever consistency.
     if name == "bge-m3":
-        return BgeM3EmbeddingProvider()
+        return BgeM3EmbeddingProvider(model_name or "BAAI/bge-m3")
     if name == "mock":
         return MockEmbeddingProvider()
     raise ValueError(f"Unknown embedding provider: {name}")

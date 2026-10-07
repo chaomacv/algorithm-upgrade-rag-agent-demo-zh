@@ -1,92 +1,133 @@
 # 命令手册
 
-这份文档只放可直接复制运行的命令。概念解释放在 `project_overview.md`、`case_schema.md` 和 `03_architecture_for_reuse.md`。
+这份文档只保留当前可用的通用命令。所有命令都围绕同一条链路：
 
-## 低门槛教学版
+```text
+历史对话 / 结构化 Case -> Chunk -> Embedding -> Index -> Retrieval -> Planner -> Report
+```
+
+## 安装依赖
+
+离线 smoke test 只需要轻量依赖：
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
 pip install -r requirements-lite.txt
-bash scripts/run_teaching_demo.sh
 ```
 
-它使用：
-
-- `MockEmbeddingProvider`
-- `MockPlanner`
-- `PlanExecutor`
-
-## 常用 CLI
-
-构建索引：
+真实 DeepSeek + BGE-M3 需要完整依赖：
 
 ```bash
-python -m algo_rag_demo.cli build-index
+pip install -r requirements.txt
 ```
 
-检索历史案例：
+## 一键运行内置数据
+
+不调用 LLM，不下载 embedding 模型，用于确认代码链路能跑通：
 
 ```bash
-python -m algo_rag_demo.cli search "Replace DRE while keeping downstream interface compatible"
+bash scripts/run_pipeline_offline.sh
 ```
 
-运行失败恢复闭环：
+真实模式：
 
 ```bash
-python -m algo_rag_demo.cli demo-failure
+source ./load_deepseek_env.sh
+bash scripts/run_pipeline_deepseek_bge.sh
 ```
 
-运行自定义数据实战入口：
+## 使用结构化 Case 运行
 
 ```bash
-bash scripts/run_custom_demo.sh
-```
-
-等价 CLI：
-
-```bash
-python -m algo_rag_demo.cli run-custom \
+python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json run \
   --case-dir examples/custom_data/cases \
   --task-file examples/custom_data/task.txt \
   --repository-facts examples/custom_data/repository_facts.txt
 ```
 
-运行测试：
+离线验证时加上：
+
+```bash
+--embedding-provider mock --offline
+```
+
+## 从历史对话抽取 Case
+
+原始对话放到 `raw/`：
+
+```text
+my_data/
+  raw/
+    conversation_001.json
+  task.txt
+  repository_facts.txt
+```
+
+抽取：
+
+```bash
+python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json extract-cases \
+  --raw-dir my_data/raw \
+  --case-dir my_data/cases
+```
+
+然后运行完整链路：
+
+```bash
+python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json run \
+  --case-dir my_data/cases \
+  --task-file my_data/task.txt \
+  --repository-facts my_data/repository_facts.txt
+```
+
+也可以让 `run` 先抽取再检索规划：
+
+```bash
+python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json run \
+  --raw-dir my_data/raw \
+  --task-file my_data/task.txt \
+  --repository-facts my_data/repository_facts.txt
+```
+
+## 单独构建索引
+
+```bash
+python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json build-index \
+  --case-dir examples/custom_data/cases
+```
+
+## 单独检索
+
+```bash
+python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json search \
+  --task "new scorer changed metadata schema and downstream validation fails" \
+  --case-dir examples/custom_data/cases \
+  --top-k 5
+```
+
+## 单独生成计划
+
+```bash
+python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json plan \
+  --task-file examples/custom_data/task.txt \
+  --case-dir examples/custom_data/cases \
+  --repository-facts examples/custom_data/repository_facts.txt
+```
+
+## 切换模型
+
+LLM 和 embedding 都来自配置文件，也可以用命令行覆盖 embedding：
+
+```bash
+python -m algo_rag_demo.cli --config configs/openai_compatible_example.json run \
+  --case-dir examples/custom_data/cases \
+  --task-file examples/custom_data/task.txt \
+  --repository-facts examples/custom_data/repository_facts.txt \
+  --embedding-provider bge-m3 \
+  --embedding-model BAAI/bge-m3
+```
+
+## 运行测试
 
 ```bash
 python -m pytest -q
-```
-
-## DeepSeek 抽取 Case
-
-```bash
-export DEEPSEEK_API_KEY="your_api_key"
-export DEEPSEEK_BASE_URL="https://api.deepseek.com"
-export DEEPSEEK_MODEL="deepseek-flash"
-python -m algo_rag_demo.cli extract-case --extractor deepseek --raw examples/data/raw/conversation_dre_upgrade.json
-```
-
-批量处理所有合成原始对话：
-
-```bash
-python -m algo_rag_demo.cli extract-case --extractor deepseek --all
-```
-
-## DeepSeek Planner + BGE-M3
-
-```bash
-source ./load_deepseek_env.sh
-python -m algo_rag_demo.cli build-index --provider bge-m3
-python -m algo_rag_demo.cli demo-failure --provider bge-m3 --planner deepseek
-```
-
-## 检索排序示例
-
-项目内置了多个相近 Case，方便观察 RAG 排序：
-
-```bash
-python -m algo_rag_demo.cli search "missing metadata algorithm runtime evidence"
-python -m algo_rag_demo.cli search "pipeline json still selects old algorithm rollback"
-python -m algo_rag_demo.cli search "DRE missing residual_map interface error"
 ```

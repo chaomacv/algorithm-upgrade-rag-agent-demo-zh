@@ -1,2 +1,0 @@
-"""Synthetic module adapters."""
-

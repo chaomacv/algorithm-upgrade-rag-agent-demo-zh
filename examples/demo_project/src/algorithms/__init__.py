@@ -1,2 +1,0 @@
-"""Synthetic algorithm implementations."""
-

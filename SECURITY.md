@@ -1,6 +1,6 @@
 # Security Policy
 
-这个仓库是教学 Demo，但仍然需要清楚处理密钥、数据和执行边界。
+这个仓库是可配置 RAG Planning Pipeline，需要清楚处理密钥、数据和执行边界。
 
 ## 不要提交的内容
 
@@ -34,15 +34,16 @@ source ./load_deepseek_env.sh
 
 `password.txt` 已经被 `.gitignore` 排除。提交前仍建议执行一次敏感信息扫描。
 
-## Executor 安全边界
+## 执行安全边界
 
-项目中的 `PlanExecutor` 不直接执行任意 LLM 生成代码。LLM 输出会被当作意图，再映射到 `ToolRegistry` 中的受控工具和安全修改模板。
+项目默认只生成 RAG-backed plan 和可审计报告，不直接执行任意 LLM 生成代码。
 
-如果你把项目改造成真实工程工具，请优先审查：
+如果你在自己的工程里继续接入自动执行器，请优先明确：
 
-- `algo_rag_demo/agent/executor.py`
-- `algo_rag_demo/agent/tool_registry.py`
-- `algo_rag_demo/demo_scenarios/`
+- 允许修改的目录和文件类型。
+- 允许运行的命令白名单。
+- 测试、验证和回滚规则。
+- LLM 输出如何转成受控操作，而不是直接执行。
 
 ## 报告问题
 
