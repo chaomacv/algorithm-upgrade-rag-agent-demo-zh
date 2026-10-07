@@ -22,21 +22,25 @@ class Retriever:
         self.index_dir = index_dir
         # case_dir is stored so custom runs can point results back to user data.
         self.case_dir = case_dir
-        self.provider = get_embedding_provider(provider_name, model_name=embedding_model)
         self.metadata = read_json(index_dir / "metadata.json")
+        expected_model = embedding_model or ("BAAI/bge-m3" if provider_name == "bge-m3" else None)
+        saved = self.metadata["_provider"]
+        if saved.get("name") != provider_name or saved.get("model") != expected_model:
+            raise ValueError("Embedding provider/model differs from this index; rebuild the index first.")
+        self.provider = get_embedding_provider(provider_name, model_name=embedding_model)
         self.index = self._load_index()
 
     def _load_index(self):
         """Load FAISS index when available, otherwise load NumPy fallback."""
         # The fallback keeps the demo runnable without faiss-cpu installed.
         path = self.index_dir / "cases.index"
-        try:
-            import faiss  # type: ignore
-
-            return faiss.read_index(str(path))
-        except Exception:
+        if self.metadata.get("_format") == "numpy":
             with path.open("rb") as handle:
-                return np.load(handle)
+                return np.load(handle, allow_pickle=False)
+        if self.metadata.get("_format") == "faiss":
+            import faiss  # type: ignore
+            return faiss.read_index(str(path))
+        raise ValueError("Legacy or unknown index format; rebuild the index first.")
 
     def search(
         self,
@@ -46,14 +50,20 @@ class Retriever:
         prefer_success: bool = True,
     ) -> List[RetrievalResult]:
         """Search top matching chunks for one query."""
+        if top_k < 1:
+            raise ValueError("top_k must be positive.")
         # Query and document vectors are normalized, so dot product ranks similarity.
         vector = self.provider.encode_query(query).reshape(1, -1).astype("float32")
+        if vector.shape[1] != self.metadata["_provider"]["dimension"] or not np.isfinite(vector).all():
+            raise ValueError("Query embedding dimension or values do not match the index.")
+        # Filtering and success bonuses must be applied before selecting top-k.
         if hasattr(self.index, "search"):
-            scores, ids = self.index.search(vector, min(top_k * 4, self.index.ntotal))
+            count = self.index.ntotal if module or prefer_success else min(top_k, self.index.ntotal)
+            scores, ids = self.index.search(vector, count)
             pairs = list(zip(ids[0].tolist(), scores[0].tolist()))
         else:
             scores = np.dot(self.index, vector[0])
-            ids = np.argsort(-scores)[: top_k * 4]
+            ids = np.argsort(-scores)
             pairs = [(int(i), float(scores[i])) for i in ids]
 
         results: List[RetrievalResult] = []
@@ -69,7 +79,7 @@ class Retriever:
                 adjusted += 0.01
             results.append(
                 RetrievalResult(
-                    score=round(adjusted, 4),
+                    score=adjusted,
                     case_id=meta["case_id"],
                     chunk_id=meta["chunk_id"],
                     chunk_type=meta["chunk_type"],
@@ -80,7 +90,6 @@ class Retriever:
                     case_path=str(self.case_dir / f"{meta['case_id']}.json"),
                 )
             )
-            if len(results) >= top_k:
-                break
-        return results
+        results.sort(key=lambda item: (-item.score, item.chunk_id))
+        return results[:top_k]
 

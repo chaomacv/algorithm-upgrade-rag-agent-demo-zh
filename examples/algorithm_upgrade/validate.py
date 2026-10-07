@@ -1,5 +1,6 @@
 import json
 import sys
+import ranking
 
 from ranking import rank
 
@@ -23,7 +24,18 @@ def check_interface():
 
 def check_runtime():
     """Verify that the configured new algorithm is actually active."""
-    assert rank(ITEMS)["algorithm"] == "NeuralScorer", "Runtime still uses LegacyRanker."
+    original = ranking.neural_scorer
+    calls = []
+    def observed_scorer(items):
+        """Record actual new-algorithm invocation without changing its result."""
+        calls.append(len(items))
+        return original(items)
+    ranking.neural_scorer = observed_scorer
+    try:
+        assert rank(ITEMS)["algorithm"] == "NeuralScorer", "Runtime still uses LegacyRanker."
+        assert calls == [len(ITEMS)], "Runtime label changed but NeuralScorer was not called."
+    finally:
+        ranking.neural_scorer = original
 
 
 def check_regression():
@@ -34,6 +46,16 @@ def check_regression():
     for row in rows:
         assert abs(row["score"] - expected[row["id"]]) < 1e-8, "Incorrect NeuralScorer score."
     assert rank([])["items"] == [], "Empty input regression."
+    additional = [
+        {"id": "x", "quality": 0.2, "relevance": 0.8},
+        {"id": "y", "quality": 1.0, "relevance": 0.0},
+        {"id": "z", "quality": 0.0, "relevance": 1.0},
+    ]
+    rows = rank(additional)["items"]
+    expected = {item["id"]: 0.7 * item["quality"] + 0.3 * item["relevance"] for item in additional}
+    assert [row["id"] for row in rows] == ["y", "x", "z"]
+    for row in rows:
+        assert abs(row["score"] - expected[row["id"]]) < 1e-8, "Additional input score regression."
 
 
 def check_rollback():

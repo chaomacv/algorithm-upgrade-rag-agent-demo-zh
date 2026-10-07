@@ -2,39 +2,14 @@ import argparse
 from pathlib import Path
 from typing import Dict, List
 
-try:
-    from rich.console import Console
-    from rich.table import Table
-except ImportError:  # pragma: no cover
-    class Console:
-        def print(self, value="") -> None:
-            print(value)
-
-    class Table:
-        def __init__(self, title: str = "") -> None:
-            self.title = title
-            self.columns = []
-            self.rows = []
-
-        def add_column(self, name: str) -> None:
-            self.columns.append(name)
-
-        def add_row(self, *values: str) -> None:
-            self.rows.append(values)
-
-        def __str__(self) -> str:
-            lines = [self.title] if self.title else []
-            if self.columns:
-                lines.append(" | ".join(self.columns))
-                lines.append("-" * max(20, len(lines[-1])))
-            lines.extend(" | ".join(row) for row in self.rows)
-            return "\n".join(lines)
+from rich.console import Console
+from rich.table import Table
 
 from algo_rag_demo.agent.llm_provider import build_chat_provider
 from algo_rag_demo.agent.planner import LLMPlanner
 from algo_rag_demo.agent.executor import build_project_adapter
 from algo_rag_demo.agent.workflow import run_agent
-from algo_rag_demo.case_pipeline.parser import LLMCaseExtractor, extract_case_file
+from algo_rag_demo.case_pipeline.parser import LLMCaseExtractor, extract_case_directory
 from algo_rag_demo.config import CASE_DIR, DEFAULT_CONFIG, INDEX_DIR, KNOWLEDGE_DIR, RUNS_DIR
 from algo_rag_demo.rag.index_builder import build_index_from_cases
 from algo_rag_demo.rag.prompt_builder import build_prompt
@@ -105,19 +80,7 @@ def cmd_extract_cases(args: argparse.Namespace) -> None:
     extractor = LLMCaseExtractor(provider)
     raw_dir = Path(args.raw_dir)
     case_dir = Path(args.case_dir)
-    raw_paths = sorted(raw_dir.glob("*.json"))
-    if not raw_paths:
-        raise ValueError(f"No raw conversation JSON files found in {raw_dir}")
-    case_dir.mkdir(parents=True, exist_ok=True)
-    for raw_path in raw_paths:
-        temp_path = case_dir / f"{raw_path.stem}.json"
-        case = extract_case_file(raw_path, temp_path, extractor)
-        if not case.case_id.startswith("CASE_") or Path(case.case_id).name != case.case_id or "/" in case.case_id or "\\" in case.case_id:
-            raise ValueError("Extracted case_id must be a safe CASE_* filename.")
-        final_path = case_dir / f"{case.case_id}.json"
-        if temp_path != final_path:
-            temp_path.unlink(missing_ok=True)
-        write_json(final_path, case)
+    for case, final_path in extract_case_directory(raw_dir, case_dir, extractor):
         console.print(f"Extracted {case.case_id} -> {final_path}")
 
 
@@ -157,7 +120,7 @@ def cmd_search(args: argparse.Namespace) -> None:
     table.add_column("Score")
     table.add_column("Text")
     for idx, item in enumerate(results, 1):
-        table.add_row(str(idx), item.case_id, item.chunk_type, str(item.score), item.text[:120])
+        table.add_row(str(idx), item.case_id, item.chunk_type, f"{item.score:.4f}", item.text[:120])
     console.print(table)
 
 
@@ -181,8 +144,22 @@ def cmd_plan(args: argparse.Namespace) -> None:
 
 
 def cmd_run(args: argparse.Namespace) -> None:
-    """Run case extraction, RAG planning, project execution, validation, and recovery."""
+    """Ensure preparation failures also produce an auditable final report."""
     config = _load_config(args.config)
+    run_dir = _run_dir("algorithm-upgrade")
+    try:
+        _run_pipeline(args, config, run_dir)
+    except (Exception, KeyboardInterrupt) as exc:
+        report_path = run_dir / "final_report.json"
+        if not report_path.exists():
+            write_json(report_path, {"status": "failed", "error": str(exc) or type(exc).__name__,
+                                    "attempts": [], "rollback": None})
+        console.print(f"Run artifacts: {run_dir}")
+        raise
+
+
+def _run_pipeline(args: argparse.Namespace, config: Dict[str, object], run_dir: Path) -> None:
+    """Run case extraction, RAG planning, project execution, validation, and recovery."""
     paths = config.get("paths", {})
     case_dir = _path(args.case_dir, Path(paths.get("case_dir", CASE_DIR)))
     default_cases = Path(paths.get("case_dir", CASE_DIR))
@@ -195,17 +172,22 @@ def cmd_run(args: argparse.Namespace) -> None:
         if (case_dir.resolve() != CASE_DIR.resolve() or
                 (raw_dir and raw_dir.resolve() != (CASE_DIR.parent / "raw").resolve())) and execution.get("demo_only"):
             raise ValueError("Custom data needs its own execution config; see docs/execution_validation.md.")
-    run_dir = _run_dir("algorithm-upgrade")
+    if not args.task and not args.task_file:
+        args.task_file = paths.get("task_file")
+    task = _task_text(args)
+    if not task.strip():
+        raise ValueError("Task text must not be empty.")
+    facts_path = args.repository_facts or paths.get("repository_facts")
+    repository_facts = Path(facts_path).read_text(encoding="utf-8") if facts_path else ""
+    provider = build_chat_provider(config.get("llm", {}))
+    planner = LLMPlanner(provider)
+    write_json(run_dir / "task.json", {"task": task})
     working_case_dir = run_dir / "cases" if raw_dir else case_dir
     if raw_dir:
         import shutil
         shutil.copytree(raw_dir, run_dir / "conversations")
-        args_for_extract = argparse.Namespace(
-            config=args.config,
-            raw_dir=str(raw_dir),
-            case_dir=str(working_case_dir),
-        )
-        cmd_extract_cases(args_for_extract)
+        for case, output in extract_case_directory(raw_dir, working_case_dir, LLMCaseExtractor(provider)):
+            console.print(f"Extracted {case.case_id} -> {output}")
     embedding = _embedding_settings(config)
     index_dir = run_dir / "index"
     knowledge_dir = run_dir / "knowledge"
@@ -216,11 +198,6 @@ def cmd_run(args: argparse.Namespace) -> None:
         knowledge_dir=knowledge_dir,
         index_dir=index_dir,
     )
-    if not args.task and not args.task_file:
-        args.task_file = paths.get("task_file")
-    task = _task_text(args)
-    facts_path = args.repository_facts or paths.get("repository_facts")
-    repository_facts = Path(facts_path).read_text(encoding="utf-8") if facts_path else ""
     top_k = args.top_k or int(config.get("retrieval", {}).get("top_k", 5))
     retriever = Retriever(
         index_dir=index_dir,
@@ -228,7 +205,6 @@ def cmd_run(args: argparse.Namespace) -> None:
         embedding_model=args.embedding_model or embedding["model"],
         case_dir=working_case_dir,
     )
-    planner = _llm_planner(config)
     if args.plan_only:
         results = retriever.search(task, top_k=top_k, module=args.module)
         plan = planner.plan(task, results, repository_facts)
@@ -238,7 +214,6 @@ def cmd_run(args: argparse.Namespace) -> None:
         adapter = build_project_adapter(execution, run_dir)
         skill_path = execution.get("skill_file")
         skill = Path(skill_path).read_text(encoding="utf-8") if skill_path else ""
-        write_json(run_dir / "task.json", {"task": task})
         report = run_agent(
             task, retriever, planner, adapter, run_dir, repository_facts, skill,
             top_k=top_k, module=args.module,
@@ -261,21 +236,18 @@ def _write_run_artifacts(
     results,
     plan: Dict[str, object],
     repository_facts: str,
-    extra: Dict[str, object] = None,
 ) -> None:
     """Write auditable output files for one pipeline run."""
     write_json(run_dir / "task.json", {"task": task})
-    write_json(run_dir / "retrieval.json", [item.dict() if hasattr(item, "dict") else item for item in results])
+    write_json(run_dir / "retrieval.json", [item.model_dump() for item in results])
     write_json(run_dir / "plan.json", plan)
     prompt = build_prompt(task, results, repository_facts)
     (run_dir / "prompt.md").write_text(prompt, encoding="utf-8")
     report = {
         "status": "planned",
         "retrieved_cases": _case_ids(results),
-        "note": "This pipeline produces a RAG-backed plan. Execution is intentionally left to a project-specific tool layer.",
+        "note": "Plan-only mode: project execution and validation were not run.",
     }
-    if extra:
-        report.update(extra)
     write_json(run_dir / "final_report.json", report)
 
 

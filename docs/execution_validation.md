@@ -29,6 +29,8 @@
 原始历史对话输入使用 paths.raw_dir 或 --raw-dir。移除示例的 demo_only 标记。
 template_dir 是待复制的项目根目录，建议提供最小目标项目，不包含虚拟环境、缓存或秘密。
 执行修改 outputs/runs 下的副本。依赖提前安装在运行 CLI 的 Python 环境中。
+复制时跳过 .git、.venv、__pycache__、.pytest_cache、outputs 和 runs，
+避免复制自身的运行目录和旧缓存。验证进程不写入 Python 字节码，确保重试执行最新源码。
 
 allowed_files 是可编辑的相对路径；验证脚本应放在白名单外。
 validation_commands 使用 argv 数组，不使用 shell 字符串；{python} 替换为当前解释器。
@@ -59,8 +61,8 @@ LLM 的 validation_plan 是计划，不能当作已验证结果。
 examples/algorithm_upgrade/validate.py 独立检查：
 
 1. interface：id、score、metadata.confidence、metadata.reason 的字段和类型。
-2. runtime：实际启用 NeuralScorer。
-3. regression：准确分数与排序、空输入。
+2. runtime：配置启用 NeuralScorer，并观察新算法函数实际被调用。
+3. regression：多组输入的准确分数与排序、空输入。
 4. rollback：显式选择 LegacyRanker 仍得到旧结果。
 
 失败轮次保存 error_analysis.json；真实错误和当前代码进入下一轮提示词，

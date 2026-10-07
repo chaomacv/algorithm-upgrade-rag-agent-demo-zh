@@ -1,4 +1,5 @@
 import importlib
+import os
 import shutil
 import subprocess
 import sys
@@ -35,9 +36,12 @@ class FileProjectAdapter:
 
     def __init__(self, config: Dict[str, object], run_dir: Path) -> None:
         """Copy the configured project and load its explicit execution boundary."""
-        self.workspace = run_dir / "workspace"
+        self.workspace = (run_dir / "workspace").resolve()
         self.checkpoint_dir = run_dir / "checkpoint"
-        shutil.copytree(Path(config["template_dir"]), self.workspace)
+        shutil.copytree(
+            Path(config["template_dir"]), self.workspace,
+            ignore=shutil.ignore_patterns(".git", ".venv", "__pycache__", ".pytest_cache", "outputs", "runs"),
+        )
         self.allowed_files = list(config["allowed_files"])
         self.commands = config["validation_commands"]
         self.timeout = int(config.get("timeout", 60))
@@ -48,7 +52,7 @@ class FileProjectAdapter:
 
     def _path(self, name: str) -> Path:
         """Resolve an allowlisted relative path inside the copied workspace."""
-        if name not in self.allowed_files or Path(name).is_absolute():
+        if name not in self.allowed_files or Path(name).is_absolute() or ".." in Path(name).parts:
             raise ValueError(f"File is not allowlisted: {name}")
         path = (self.workspace / name).resolve()
         path.relative_to(self.workspace.resolve())
@@ -119,6 +123,7 @@ class FileProjectAdapter:
                 process = subprocess.run(
                     argv, cwd=self.workspace, capture_output=True, text=True,
                     timeout=self.timeout, shell=False,
+                    env=dict(os.environ, PYTHONDONTWRITEBYTECODE="1"),
                 )
                 checks.append({
                     "command": command, "passed": process.returncode == 0,

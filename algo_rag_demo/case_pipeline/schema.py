@@ -1,4 +1,4 @@
-from typing import Any, Dict, List, Optional, Protocol
+from typing import Any, Dict, List, Literal, Optional, Protocol
 
 from pydantic import BaseModel, Field
 
@@ -16,7 +16,7 @@ class Conversation(BaseModel):
 
 
 class EngineeringCase(BaseModel):
-    case_id: str
+    case_id: str = Field(pattern=r"^CASE_[A-Za-z0-9_.-]+$")
     module: str
     task: str
     old_algorithm: Optional[str] = None
@@ -26,7 +26,7 @@ class EngineeringCase(BaseModel):
     problems: List[Dict[str, str]] = Field(default_factory=list)
     solutions: List[Dict[str, str]] = Field(default_factory=list)
     validation: Dict[str, str] = Field(default_factory=dict)
-    final_status: str
+    final_status: Literal["success", "failed", "partial"]
     reusable_experience: List[str] = Field(default_factory=list)
     source_conversation_id: str
 
@@ -47,9 +47,6 @@ class CaseExtractor(Protocol):
 
 
 def model_to_dict(model: BaseModel) -> Dict[str, Any]:
-    """Convert Pydantic v1/v2 or fallback models to plain dictionaries."""
-    # This helper keeps serialization code independent of Pydantic version.
-    if hasattr(model, "model_dump"):
-        return model.model_dump()
-    return model.dict()
+    """Convert validated models to plain dictionaries."""
+    return model.model_dump()
 

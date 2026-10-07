@@ -1,9 +1,8 @@
-numpy
-pydantic
+numpy>=1.24,<2
+pydantic>=2,<3
 rich
-pytest
+pytest>=7,<9
 faiss-cpu
-FlagEmbedding
 torch
 transformers
 huggingface-hub

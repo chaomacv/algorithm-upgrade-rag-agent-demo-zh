@@ -92,7 +92,7 @@ class MockEmbeddingProvider:
 class BgeM3EmbeddingProvider:
     """BAAI/bge-m3 dense embedding provider using Transformers."""
 
-    def __init__(self, model_name: str = "BAAI/bge-m3", max_length: int = 8192) -> None:
+    def __init__(self, model_name: str = "BAAI/bge-m3", max_length: int = 8192, batch_size: int = 4) -> None:
         """Load BGE-M3 locally and choose GPU when PyTorch can see CUDA."""
         import torch
         from huggingface_hub import snapshot_download
@@ -119,6 +119,9 @@ class BgeM3EmbeddingProvider:
 
         self.torch = torch
         self.max_length = max_length
+        if batch_size < 1:
+            raise ValueError("batch_size must be positive.")
+        self.batch_size = batch_size
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.tokenizer = AutoTokenizer.from_pretrained(resolved_model_path)
         self.model = AutoModel.from_pretrained(resolved_model_path).to(self.device)
@@ -133,6 +136,15 @@ class BgeM3EmbeddingProvider:
         return self._encode([text])[0]
 
     def _encode(self, texts: List[str]) -> np.ndarray:
+        """Encode in bounded batches so user datasets do not all occupy GPU memory at once."""
+        if not texts:
+            return np.empty((0, self.model.config.hidden_size), dtype="float32")
+        return np.vstack([
+            self._encode_batch(texts[start:start + self.batch_size])
+            for start in range(0, len(texts), self.batch_size)
+        ])
+
+    def _encode_batch(self, texts: List[str]) -> np.ndarray:
         """Run BGE-M3 and L2-normalize dense vectors."""
         # The first-token embedding is the standard dense vector interface for
         # BGE encoder models; normalization makes inner product behave like cosine.

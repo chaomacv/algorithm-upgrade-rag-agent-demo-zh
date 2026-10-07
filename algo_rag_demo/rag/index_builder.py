@@ -4,27 +4,23 @@ from typing import Dict, List, Tuple
 import numpy as np
 
 from algo_rag_demo.case_pipeline.chunker import chunk_cases
+from algo_rag_demo.case_pipeline.parser import load_case_file
 from algo_rag_demo.case_pipeline.schema import EngineeringCase, KnowledgeChunk, model_to_dict
 from algo_rag_demo.config import CASE_DIR, INDEX_DIR, KNOWLEDGE_DIR
-from algo_rag_demo.rag.embedding import EmbeddingProvider, get_embedding_provider
-from algo_rag_demo.utils.jsonio import read_json, write_json
+from algo_rag_demo.rag.embedding import get_embedding_provider
+from algo_rag_demo.utils.jsonio import write_json
 
 
 def load_cases(case_dir: Path = CASE_DIR) -> List[EngineeringCase]:
     """Load all structured case JSON files from disk."""
     # Sorting gives deterministic chunk and vector row order.
-    return [EngineeringCase(**read_json(path)) for path in sorted(case_dir.glob("CASE_*.json"))]
-
-
-def build_index(provider_name: str = "mock") -> Tuple[int, int, int]:
-    """Build chunks, embeddings, and a FAISS-compatible index."""
-    # The default index uses the repository's bundled synthetic examples.
-    return build_index_from_cases(
-        provider_name=provider_name,
-        case_dir=CASE_DIR,
-        knowledge_dir=KNOWLEDGE_DIR,
-        index_dir=INDEX_DIR,
-    )
+    cases = []
+    for path in sorted(case_dir.glob("CASE_*.json")):
+        case = load_case_file(path)
+        if path.stem != case.case_id:
+            raise ValueError(f"Case filename must match case_id: {path}")
+        cases.append(case)
+    return cases
 
 
 def build_index_from_cases(
@@ -35,18 +31,16 @@ def build_index_from_cases(
     index_dir: Path = INDEX_DIR,
 ) -> Tuple[int, int, int]:
     """Build chunks, embeddings, and an index from a caller-selected case directory."""
-    # Custom runs pass their own case, knowledge, and index directories here so
-    # generated artifacts stay separate from the bundled teaching demo.
-    provider = get_embedding_provider(provider_name, model_name=embedding_model)
     cases = load_cases(case_dir)
     if not cases:
         raise ValueError(f"No CASE_*.json files found in {case_dir}")
+    provider = get_embedding_provider(provider_name, model_name=embedding_model)
     chunks = chunk_cases(cases)
     knowledge_dir.mkdir(parents=True, exist_ok=True)
     write_json(knowledge_dir / "chunks.json", [model_to_dict(chunk) for chunk in chunks])
     texts = [chunk.text for chunk in chunks]
     vectors = provider.encode_documents(texts)
-    save_index(vectors, chunks, provider_name, index_dir)
+    save_index(vectors, chunks, provider_name, index_dir, embedding_model)
     return len(cases), len(chunks), int(vectors.shape[1])
 
 
@@ -55,24 +49,33 @@ def save_index(
     chunks: List[KnowledgeChunk],
     provider_name: str,
     index_dir: Path = INDEX_DIR,
+    embedding_model: str = None,
 ) -> None:
     """Persist vectors and metadata for later retrieval."""
     # Metadata maps vector row ids back to chunk and case identities.
+    if vectors.ndim != 2 or vectors.shape[0] != len(chunks) or not vectors.shape[1] or not np.isfinite(vectors).all():
+        raise ValueError("Embedding vectors must be a finite matrix with one row per chunk.")
     index_dir.mkdir(parents=True, exist_ok=True)
     metadata: Dict[str, Dict[str, object]] = {
         str(i): model_to_dict(chunk) for i, chunk in enumerate(chunks)
     }
-    metadata["_provider"] = {"name": provider_name, "dimension": int(vectors.shape[1])}
+    metadata["_provider"] = {
+        "name": provider_name, "dimension": int(vectors.shape[1]),
+        "model": embedding_model or ("BAAI/bge-m3" if provider_name == "bge-m3" else None),
+    }
 
     try:
         import faiss  # type: ignore
 
+    except ImportError:
+        with (index_dir / "cases.index").open("wb") as handle:
+            np.save(handle, vectors.astype("float32"))
+        metadata["_format"] = "numpy"
+    else:
         index = faiss.IndexFlatIP(int(vectors.shape[1]))
         index.add(vectors.astype("float32"))
         faiss.write_index(index, str(index_dir / "cases.index"))
-    except Exception:
-        with (index_dir / "cases.index").open("wb") as handle:
-            np.save(handle, vectors.astype("float32"))
+        metadata["_format"] = "faiss"
 
     write_json(index_dir / "metadata.json", metadata)
 

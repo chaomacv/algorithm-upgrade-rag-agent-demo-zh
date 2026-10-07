@@ -32,7 +32,7 @@ def run_agent(task, retriever, planner, adapter, run_dir: Path,
             if last_error:
                 facts += "\n\nPREVIOUS VALIDATION / EXECUTION FAILURE:\n" + last_error
             facts += "\n\nALGORITHM REPLACEMENT SKILL:\n" + skill
-            write_json(attempt_dir / "retrieval.json", [item.dict() for item in results])
+            write_json(attempt_dir / "retrieval.json", [item.model_dump() for item in results])
             write_json(attempt_dir / "query.json", {"query": query})
             (attempt_dir / "prompt.md").write_text(build_prompt(task, results, facts), encoding="utf-8")
             try:
@@ -55,8 +55,8 @@ def run_agent(task, retriever, planner, adapter, run_dir: Path,
             write_json(attempt_dir / "error_analysis.json", analysis)
             # Error evidence is embedded and searched again; no fixed repair is injected.
             query = task + "\nValidation failure:\n" + last_error
-    except Exception as exc:
-        report = {"status": "failed", "attempts": attempts, "error": str(exc),
+    except (Exception, KeyboardInterrupt) as exc:
+        report = {"status": "failed", "attempts": attempts, "error": str(exc) or type(exc).__name__,
                   "rollback": _rollback(adapter)}
         write_json(run_dir / "final_report.json", report)
         raise

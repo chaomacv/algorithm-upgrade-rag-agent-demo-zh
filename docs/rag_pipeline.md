@@ -20,6 +20,11 @@ RAG 部分只依赖结构化 `EngineeringCase`，不关心 Case 是手写的，�
 
 索引使用归一化向量和内积相似度。安装 `faiss-cpu` 时使用 FAISS；没有 FAISS 时使用 NumPy 兼容文件，方便本地测试。
 
+索引元数据记录 Embedding provider、模型、维度和存储格式。查询必须使用建索引时
+的同一模型；模型切换或旧格式索引需要重新构建。模块过滤和成功案例加分后重新排序，
+再取 Top-K；排序使用完整分数精度，只在终端展示时保留四位小数。
+BGE-M3 按批次编码 Chunk，避免把用户全部数据一次放入显存。
+
 默认真实 embedding provider 是：
 
 ```text

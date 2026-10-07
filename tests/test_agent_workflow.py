@@ -178,3 +178,23 @@ def test_failed_restore_is_reported_as_rollback_failed():
         assert report["status"] == "rollback_failed"
         assert report["rollback"]["restored"] is False
         assert report["rollback"]["error"] == "restore unavailable"
+
+
+def test_keyboard_interrupt_restores_applied_edits():
+    """Restore the original state when execution is interrupted after mutation."""
+    with TemporaryDirectory() as temporary:
+        root = Path(temporary)
+        adapter, provider, retriever = _components(root, repair=False)
+        def interrupted_validation():
+            """Interrupt after the first config edit was actually written."""
+            raise KeyboardInterrupt()
+        adapter.validate = interrupted_validation
+        try:
+            run_agent("Upgrade", retriever, LLMPlanner(provider), adapter, root)
+        except KeyboardInterrupt:
+            pass
+        else:
+            raise AssertionError("Expected interruption.")
+        report = read_json(root / "final_report.json")
+        assert report["rollback"]["restored"] is True
+        assert json.loads((adapter.workspace / "config.json").read_text())["algorithm"] == "LegacyRanker"

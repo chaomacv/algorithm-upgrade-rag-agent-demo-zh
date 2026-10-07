@@ -1,18 +1,15 @@
-import json
-import re
 from typing import Dict, List, Protocol
 
 from algo_rag_demo.agent.llm_provider import ChatProvider
 from algo_rag_demo.rag.models import RetrievalResult
 from algo_rag_demo.rag.prompt_builder import build_prompt
+from algo_rag_demo.utils.jsonio import parse_json_object
 
 
 class Planner(Protocol):
     def plan(self, task: str, results: List[RetrievalResult], repository_facts: str = "") -> Dict[str, object]:
         """Create a plan from a task, retrieved evidence, and repository facts."""
         ...
-
-
 
 
 class LLMPlanner:
@@ -39,18 +36,7 @@ class LLMPlanner:
             },
         ]
         content = self.provider.complete(messages, response_format={"type": "json_object"})
-        return _normalize_plan(_parse_json_object(content), results)
-
-
-def _parse_json_object(content: str) -> Dict[str, object]:
-    """Parse a JSON object from an LLM response."""
-    try:
-        return json.loads(content)
-    except json.JSONDecodeError:
-        match = re.search(r"\{.*\}", content, re.DOTALL)
-        if not match:
-            raise
-        return json.loads(match.group(0))
+        return _normalize_plan(parse_json_object(content), results)
 
 
 def _normalize_plan(plan: Dict[str, object], results: List[RetrievalResult]) -> Dict[str, object]:
