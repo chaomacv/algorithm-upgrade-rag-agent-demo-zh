@@ -1,7 +1,7 @@
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from algo_rag_demo.agent.planner import EvidencePlanner
+from algo_rag_demo.agent.planner import LLMPlanner
 from algo_rag_demo.rag.index_builder import build_index_from_cases
 from algo_rag_demo.rag.retriever import Retriever
 
@@ -31,6 +31,10 @@ def test_custom_case_builds_index_and_plan():
         results = Retriever(index_dir=index_dir, provider_name="mock", case_dir=case_dir).search(task, top_k=1)
         assert results[0].case_id == "CASE_CUSTOM_001"
 
-        plan = EvidencePlanner().plan(task, results)
-        assert plan["task_understanding"]["mode"] == "evidence_only"
+        class TestProvider:
+            def complete(self, messages, response_format=None):
+                """Return test planning fields without a network dependency."""
+                return '{"plan": ["Inspect metadata"], "validation_plan": ["Check interface"]}'
+        plan = LLMPlanner(TestProvider()).plan(task, results)
+        assert plan["plan"] == ["Inspect metadata"]
         assert "validation_plan" in plan

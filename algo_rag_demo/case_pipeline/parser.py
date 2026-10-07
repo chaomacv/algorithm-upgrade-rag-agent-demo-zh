@@ -49,7 +49,8 @@ Keep only reusable, sanitized engineering knowledge. Do not include secrets, pri
             response_format={"type": "json_object"},
         )
         data = _parse_json_object(content)
-        data.setdefault("source_conversation_id", conversation.conversation_id)
+        # Provenance comes from input identity rather than generated model text.
+        data["source_conversation_id"] = conversation.conversation_id
         return EngineeringCase(**data)
 
 

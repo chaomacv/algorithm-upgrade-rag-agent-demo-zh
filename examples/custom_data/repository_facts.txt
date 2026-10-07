@@ -1,6 +1,10 @@
-Target repository facts for the custom dry run:
-- This file is optional, but it helps the prompt describe the current repository context.
-- The target module is a ranking stage inside a larger pipeline.
-- Downstream consumers require stable metadata fields.
-- Configuration controls which algorithm implementation is active.
-- Validation should include interface checks, runtime evidence, and rollback readiness.
+Target repository: examples/algorithm_upgrade, copied into the run workspace.
+- ranking.py contains legacy_ranker, neural_scorer, and rank(items, algorithm=None).
+- config.json selects LegacyRanker; upgrade must select NeuralScorer.
+- neural_scorer uses 0.7 * quality + 0.3 * relevance. Keep the formula unchanged.
+- Native fields: id, value, confidence, explanation.
+- Downstream fields: id, score, metadata.confidence, metadata.reason.
+- Add an adapter in rank; keep both algorithm implementations unchanged.
+- Preserve algorithm="LegacyRanker" override for rollback.
+- Only ranking.py and config.json are editable.
+- Fixed validation command: python validate.py; never modify validate.py.

@@ -26,7 +26,7 @@ RAG 部分只依赖结构化 `EngineeringCase`，不关心 Case 是手写的，�
 bge-m3 / BAAI/bge-m3
 ```
 
-离线 smoke test 可以使用：
+内部自动化测试使用确定性向量：
 
 ```text
 mock
@@ -34,12 +34,17 @@ mock
 
 ## Planner 输入
 
-Prompt Builder 会把三部分拼成 LLM 输入：
+Prompt Builder 会把以下内容拼成 LLM 输入：
 
 ```text
 当前任务
 当前仓库事实
 Top-K 检索结果
+Algorithm Replacement Skill
+当前允许修改的文件内容与可用工具
+上一轮验证失败信息（若有）
 ```
 
-Planner 输出结构化 JSON 计划，便于后续人工审查或接入项目自己的执行器。
+Planner 输出结构化 JSON 计划和 actions。ProjectAdapter 实际执行后独立验证，
+失败信息进入错误查询，再次检索、规划与执行；重试耗尽则恢复 checkpoint。
+默认示例使用 DeepSeek 和 BGE-M3，完整快速开始见 README。

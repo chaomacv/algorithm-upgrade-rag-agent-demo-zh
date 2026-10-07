@@ -1,5 +1,6 @@
 import hashlib
 import os
+from functools import lru_cache
 from typing import List, Protocol
 
 import numpy as np
@@ -151,6 +152,7 @@ class BgeM3EmbeddingProvider:
         return vectors / norms
 
 
+@lru_cache(maxsize=2)
 def get_embedding_provider(name: str = "mock", model_name: str = None) -> EmbeddingProvider:
     """Select the configured embedding provider by name."""
     # Keep provider selection centralized for CLI and retriever consistency.

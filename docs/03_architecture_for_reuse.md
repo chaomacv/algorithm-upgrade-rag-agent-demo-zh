@@ -10,7 +10,9 @@
 -> Vector Index
 -> Retrieval
 -> LLM Planner
--> Plan / Report
+-> ProjectAdapter 执行
+-> Validation
+-> 成功报告 / 错误再检索与重试 / 回滚
 ```
 
 ## 方式一：直接写结构化 Case
@@ -69,7 +71,7 @@ my_data/
 运行：
 
 ```bash
-python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json run \
+python -m algo_rag_demo.cli --config configs/my_project.json run \
   --case-dir my_data/cases \
   --task-file my_data/task.txt \
   --repository-facts my_data/repository_facts.txt
@@ -125,11 +127,14 @@ python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json extract-cases 
 每次运行会生成：
 
 ```text
-outputs/runs/<timestamp>-rag-plan/
+outputs/runs/<timestamp>-algorithm-upgrade-<id>/
   task.json
-  retrieval.json
-  prompt.md
-  plan.json
+  attempts/01/
+    retrieval.json
+    prompt.md
+    plan.json
+    execution.json
+    validation.json
   final_report.json
   knowledge/chunks.json
   index/
@@ -137,9 +142,9 @@ outputs/runs/<timestamp>-rag-plan/
 
 重点看：
 
-- `retrieval.json`：检索排序是否正确。
-- `prompt.md`：最终给 Planner 的上下文。
-- `plan.json`：LLM 生成的工程计划。
+- `attempts/01/retrieval.json`：检索排序是否正确。
+- `attempts/01/prompt.md`：最终给 Planner 的上下文。
+- `attempts/01/plan.json`：LLM 生成的工程计划。
 - `knowledge/chunks.json`：Case 被切成了哪些检索单元。
 
 ## 自动适配的边界
@@ -154,4 +159,7 @@ outputs/runs/<timestamp>-rag-plan/
 - index 输出目录
 - run artifact 输出目录
 
-项目不会默认修改你的代码仓库。原因是不同项目的文件结构、测试命令、patch 策略和回滚机制都不同。这个仓库产出的是 RAG-backed plan，后续执行层应该由具体项目单独实现。
+默认演示执行并验证示例项目副本。自己的数据要同步接入对应的项目执行与验证：
+创建 configs/my_project.json，设置 template_dir、allowed_files、validation_commands 和
+skill_file，或实现 ProjectAdapter。详见[执行与验证接口](execution_validation.md)。
+自定义数据不会自动套用默认排名项目的验证。仅检查数据检索和计划时可使用 --plan-only。

@@ -4,6 +4,7 @@ from typing import Dict, List, Protocol
 
 from algo_rag_demo.agent.llm_provider import ChatProvider
 from algo_rag_demo.rag.models import RetrievalResult
+from algo_rag_demo.rag.prompt_builder import build_prompt
 
 
 class Planner(Protocol):
@@ -12,42 +13,6 @@ class Planner(Protocol):
         ...
 
 
-class EvidencePlanner:
-    """Deterministic fallback planner for offline smoke tests."""
-
-    def plan(self, task: str, results: List[RetrievalResult], repository_facts: str = "") -> Dict[str, object]:
-        """Create a generic evidence-based plan without calling an LLM."""
-        modules = sorted({item.module for item in results})
-        return {
-            "task_understanding": {
-                "task": task,
-                "candidate_modules": modules,
-                "mode": "evidence_only",
-            },
-            "retrieved_experience_used": [
-                f"{item.chunk_id}: {item.text[:160]}" for item in results
-            ],
-            "files_to_inspect": [],
-            "plan": [
-                "Read the top retrieved historical cases and identify reusable constraints.",
-                "Map the task-specific risks to the current target repository.",
-                "Inspect target module interfaces before editing code.",
-                "Create a checkpoint or rollback plan before mutation.",
-                "Apply the smallest compatible change.",
-                "Run interface, runtime, regression, and rollback validation.",
-            ],
-            "validation_plan": [
-                "Verify public output schema remains compatible.",
-                "Run the target repository's normal test command.",
-                "Check runtime evidence that the new behavior is active.",
-                "Verify rollback or feature-flag path.",
-            ],
-            "rollback_plan": [
-                "Keep a pre-change checkpoint.",
-                "Record every modified file.",
-                "Restore checkpoint if validation fails.",
-            ],
-        }
 
 
 class LLMPlanner:
@@ -59,10 +24,6 @@ class LLMPlanner:
 
     def plan(self, task: str, results: List[RetrievalResult], repository_facts: str = "") -> Dict[str, object]:
         """Ask an LLM to create a structured plan from RAG evidence."""
-        evidence = [
-            item.dict() if hasattr(item, "dict") else item
-            for item in results
-        ]
         messages = [
             {
                 "role": "system",
@@ -74,25 +35,7 @@ class LLMPlanner:
             },
             {
                 "role": "user",
-                "content": (
-                    "Create an implementation plan for this task using retrieved RAG evidence. "
-                    "Do not invent repository facts. If facts are missing, state what to inspect. "
-                    "Keep the plan reusable and auditable.\n\n"
-                    f"TASK:\n{task}\n\n"
-                    f"CURRENT_REPOSITORY_FACTS:\n{repository_facts or 'No repository facts provided.'}\n\n"
-                    "RETRIEVED_EVIDENCE:\n"
-                    + json.dumps(evidence, indent=2, ensure_ascii=False)
-                    + "\n\nReturn JSON with these keys exactly:\n"
-                    "{\n"
-                    '  "task_understanding": {},\n'
-                    '  "retrieved_experience_used": ["chunk id and lesson"],\n'
-                    '  "files_to_inspect": ["path or component"],\n'
-                    '  "plan": ["step"],\n'
-                    '  "validation_plan": ["check"],\n'
-                    '  "rollback_plan": ["rollback step"],\n'
-                    '  "risks": ["risk"]\n'
-                    "}"
-                ),
+                "content": build_prompt(task, results, repository_facts),
             },
         ]
         content = self.provider.complete(messages, response_format={"type": "json_object"})
@@ -119,6 +62,9 @@ def _normalize_plan(plan: Dict[str, object], results: List[RetrievalResult]) -> 
     plan.setdefault("validation_plan", [])
     plan.setdefault("rollback_plan", [])
     plan.setdefault("risks", [])
+    plan.setdefault("actions", [])
+    if not isinstance(plan["actions"], list):
+        raise ValueError("Plan actions must be a list.")
     for key in ["retrieved_experience_used", "files_to_inspect", "plan", "validation_plan", "rollback_plan", "risks"]:
         value = plan.get(key, [])
         if not isinstance(value, list):

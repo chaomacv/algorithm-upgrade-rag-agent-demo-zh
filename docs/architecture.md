@@ -1,59 +1,35 @@
 # 架构概览
 
-项目现在只保留一条通用 RAG Planning Pipeline，避免把固定示例流程和可复用能力混在一起。
+默认提供完整算法升级案例，通用闭环与具体项目通过接口连接。
 
 ```text
-历史对话 / 结构化 Case
--> Case 抽取
--> Schema 对齐的 Chunk
--> Chunk Text Embedding
--> Vector Index
--> Query Retrieval
--> Prompt Builder
--> LLM Planner
--> Plan / Report
+Conversation -> LLMCaseExtractor -> EngineeringCase -> chunk_cases
+-> EmbeddingProvider -> Index -> Retriever.search
+-> build_prompt -> LLMPlanner -> ProjectAdapter.execute
+-> ProjectAdapter.validate
+   Pass: Final Report
+   Fail: Error Analysis -> error query -> Retrieval -> repair plan
+   Attempts exhausted: ProjectAdapter.rollback -> Final Report
 ```
 
-## 模块边界
+| 位置 | 职责 |
+| --- | --- |
+| case_pipeline/parser.py | 历史对话抽取与 Schema 校验 |
+| case_pipeline/chunker.py | 按任务、约束、解决方案创建 Chunk |
+| rag/embedding.py | EmbeddingProvider，文档与查询使用同一向量空间 |
+| rag/index_builder.py | 索引与向量行到 Chunk 元数据映射 |
+| rag/retriever.py | 检索并返回可溯源的 RetrievalResult |
+| rag/prompt_builder.py | 合并任务、经验、Skill、事实和错误上下文 |
+| agent/llm_provider.py | 可替换 OpenAI-compatible 模型服务 |
+| agent/planner.py | LLMPlanner 返回计划与结构化 actions |
+| agent/executor.py | ProjectAdapter 协议、白名单编辑与固定验证命令 |
+| agent/workflow.py | 检索、执行、验证、错误反馈、重试和回滚 |
+| cli.py | 抽取、建索引、检索、规划和完整 run 命令 |
 
-```text
-algo_rag_demo/
-  case_pipeline/  历史对话、结构化 Case、Chunk
-  rag/            Embedding、Index、Retrieval、Prompt
-  agent/          LLM provider、Planner
-  cli.py          命令入口
-```
+FileProjectAdapter 在运行目录复制项目，读取实际文件作为仓库事实。
+LLM 的 write_file 动作只能编辑白名单文件；验证命令来自配置而非模型。
+实际运行 Python 代码仍具有当前用户权限，该执行器不等同沙箱。
 
-## 接口设计
-
-LLM 接口在 `algo_rag_demo/agent/llm_provider.py`：
-
-- `ChatProvider`：通用协议。
-- `OpenAICompatibleChatProvider`：适配 DeepSeek、OpenAI-compatible 服务。
-- `build_chat_provider()`：从配置创建 provider。
-
-Embedding 接口在 `algo_rag_demo/rag/embedding.py`：
-
-- `EmbeddingProvider`：通用协议。
-- `BGEEmbeddingProvider`：真实语义向量。
-- `MockEmbeddingProvider`：离线测试向量。
-- `get_embedding_provider()`：从 provider 名称和模型名创建实例。
-
-Planner 接口在 `algo_rag_demo/agent/planner.py`：
-
-- `Planner`：通用协议。
-- `LLMPlanner`：读取检索结果并调用 LLM 生成计划。
-- `EvidencePlanner`：不调用外部服务的确定性备用实现。
-
-## 数据适配方式
-
-项目支持两种输入：
-
-1. 用户直接提供 `EngineeringCase` JSON。
-2. 用户提供历史对话 JSON，再用 LLM 抽取成 `EngineeringCase`。
-
-后续 chunk、embedding、index、retrieval、prompt 和 planner 都只依赖 `EngineeringCase` schema，因此换数据后不需要改后续代码。
-
-## 为什么不内置执行器
-
-真实工程执行依赖具体仓库的文件结构、测试命令、patch 策略、权限边界和回滚机制。这个项目的通用部分停在 RAG-backed plan 和可审计报告，避免把一个示例执行器伪装成通用执行能力。
+自己的数据映射到 EngineeringCase 后，Chunk 到规划步骤自动适配。
+项目工具和验证通过 [ProjectAdapter 接口](execution_validation.md) 适配。
+run_agent 接收 retriever、planner、adapter，不绑定示例算法或 DeepSeek。

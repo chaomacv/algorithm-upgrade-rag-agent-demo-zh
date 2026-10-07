@@ -15,6 +15,19 @@
     "top_k": 5
   },
   "paths": {
-    "case_dir": "examples/custom_data/cases"
+    "case_dir": "examples/custom_data/cases",
+    "raw_dir": "examples/custom_data/raw",
+    "task_file": "examples/custom_data/task.txt",
+    "repository_facts": "examples/custom_data/repository_facts.txt"
+  },
+  "execution": {
+    "factory": "algo_rag_demo.agent.executor:FileProjectAdapter",
+    "demo_only": true,
+    "template_dir": "examples/algorithm_upgrade",
+    "allowed_files": ["ranking.py", "config.json"],
+    "validation_commands": [["{python}", "validate.py"]],
+    "skill_file": "examples/algorithm_upgrade/skill.md",
+    "max_attempts": 3,
+    "timeout": 60
   }
 }

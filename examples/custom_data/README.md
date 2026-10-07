@@ -1,38 +1,12 @@
-# Custom Data Template
+# 示例数据与自定义模板
 
-这个目录演示如何把自己的历史工程经验接入通用 RAG Planning Pipeline。
+raw/ 是排名算法替换的历史工程对话，cases/ 是结构化数据模板，
+task.txt 是新任务，repository_facts.txt 是当前示例项目事实。
 
-最小可运行结构：
+在仓库根目录运行 bash scripts/run_demo.sh：
+默认从 raw/ 用 LLM 抽取本次 Case，再完成 BGE-M3 检索、执行、验证与重试或回滚。
+示例代码和独立验证位于 examples/algorithm_upgrade。
 
-```text
-examples/custom_data/
-  cases/
-    CASE_CUSTOM_001.json
-  task.txt
-  repository_facts.txt
-```
-
-离线运行：
-
-```bash
-bash scripts/run_pipeline_offline.sh
-```
-
-真实 DeepSeek + BGE-M3 运行：
-
-```bash
-source ./load_deepseek_env.sh
-bash scripts/run_pipeline_deepseek_bge.sh
-```
-
-替换成自己的结构化数据时，保持 `CASE_*.json` 文件名和 `EngineeringCase` 字段结构即可。
-
-建议先只替换 `task.txt`，观察检索排序是否符合预期；再逐步替换 `cases/` 下的历史 Case。
-
-如果你只有历史对话，可以参考 `raw/conversation_custom_001.json`，然后运行：
-
-```bash
-python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json extract-cases \
-  --raw-dir examples/custom_data/raw \
-  --case-dir examples/custom_data/cases
-```
+自己的数据继续遵循 EngineeringCase Schema；完整执行还需接入对应项目验证。
+见[数据设计](../../docs/03_architecture_for_reuse.md)、
+[执行与验证接口](../../docs/execution_validation.md)。

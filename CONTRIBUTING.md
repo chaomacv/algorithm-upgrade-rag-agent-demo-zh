@@ -19,13 +19,12 @@
 
 ```bash
 python -m pytest -q
-bash scripts/run_pipeline_offline.sh
 ```
 
 如果改动了 BGE-M3 或 DeepSeek 集成，再运行：
 
 ```bash
-bash scripts/run_pipeline_deepseek_bge.sh
+bash scripts/run_demo.sh
 ```
 
 ## 数据要求
