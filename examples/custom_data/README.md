@@ -19,3 +19,5 @@ bash scripts/run_custom_demo.sh
 ```
 
 替换成自己的数据时，保持 `CASE_*.json` 文件名和 `EngineeringCase` 字段结构即可。
+
+建议先只替换 `task.txt`，观察检索排序是否符合预期；再逐步替换 `cases/` 下的历史 Case。
