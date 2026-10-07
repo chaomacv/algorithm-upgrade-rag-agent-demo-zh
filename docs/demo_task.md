@@ -6,25 +6,25 @@
 
 ```mermaid
 flowchart TD
-  A[Historical Engineer-Agent Conversation] --> B[Case Extraction]
-  B --> C[Structured Engineering Case]
-  C --> D[Schema-aligned Semantic Chunking]
-  D --> E[BGE-M3 Embedding]
-  E --> F[FAISS-compatible Index]
-  G[New Engineering Task] --> H[Query Embedding]
+  A[历史工程师与代理对话] --> B[工程案例抽取]
+  B --> C[结构化工程案例]
+  C --> D[按案例结构进行语义分块]
+  D --> E[BGE-M3 文本向量化]
+  E --> F[FAISS 兼容向量索引]
+  G[新的工程任务] --> H[查询向量化]
   H --> F
-  F --> I[Top-K Historical Case Chunks]
-  I --> J[Prompt Builder]
-  K[Algorithm Replacement Skill] --> J
-  L[Current Repository Facts] --> J
-  J --> M[Coding Agent / LLM Planner]
-  M --> N[Restricted Tools]
-  N --> O[Validation]
-  O -->|Pass| P[Final Report]
-  O -->|Fail| Q[Error Analysis]
-  Q --> R{Retry / Rollback}
-  R -->|Retry with error query| H
-  R -->|Restore checkpoint| P
+  F --> I[最相关的 K 个历史案例分块]
+  I --> J[提示词构建]
+  K[算法替换技能与约束] --> J
+  L[当前代码仓库事实] --> J
+  J --> M[编码代理与大模型规划器]
+  M --> N[受限工具执行]
+  N --> O[验证]
+  O -->|通过| P[最终报告]
+  O -->|失败| Q[错误分析]
+  Q --> R{重试或回滚}
+  R -->|使用错误信息再次检索| H
+  R -->|恢复初始检查点| P
 ```
 
 ## 示例任务
