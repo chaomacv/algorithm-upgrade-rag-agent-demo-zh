@@ -53,7 +53,8 @@
   "reusable_experience": [
     "Do not declare algorithm replacement complete until runtime metadata proves the new algorithm is active",
     "Treat metadata schema compatibility as part of the public interface",
-    "Keep rollback ready while validating the new implementation"
+    "Keep rollback ready while validating the new implementation",
+    "Use this file as the minimal template for adding another custom historical case"
   ],
   "source_conversation_id": "CONV_CUSTOM_001"
 }
