@@ -1,33 +1,28 @@
-# 算法升级 RAG 代理演示
+# 可配置 RAG Planning Pipeline
 
-以“复杂算法系统中的单模块替换”为完整案例：从历史工程对话提取经验，
-用 BGE-M3 检索，通过 DeepSeek 生成代码修改，执行并验证；失败后分析错误、
-再次检索和修复，最终成功或回滚。数据、模型以及项目执行与验证均有替换接口。
+这是一个轻量、可替换模型的 RAG Planning 项目。用户可以放入自己的历史对话或结构化 Case，
+选择 LLM Planner 和 Embedding 模型，然后自动完成：
 
-```mermaid
-flowchart TD
-  A[Historical Engineer-Agent Conversation] --> B[Case Extraction]
-  B --> C[Structured Engineering Case]
-  C --> D[Schema-aligned Semantic Chunking]
-  D --> E[BGE-M3 Embedding]
-  E --> F[FAISS-compatible Index]
-  G[New Engineering Task] --> H[Query Embedding]
-  H --> F
-  F --> I[Top-K Historical Case Chunks]
-  I --> J[Prompt Builder]
-  K[Algorithm Replacement Skill] --> J
-  L[Current Repository Facts] --> J
-  J --> M[Coding Agent / LLM Planner]
-  M --> N[Restricted Tools]
-  N --> O[Validation]
-  O -->|Pass| P[Final Report]
-  O -->|Fail| Q[Error Analysis]
-  Q --> R{Retry / Rollback}
-  R -->|Retry with error query| H
-  R -->|Restore checkpoint| P
+```text
+历史对话 / 结构化 Case
+-> Case 抽取（已有结构化 Case 时跳过）
+-> Schema 对齐的 Chunk
+-> Embedding
+-> Vector Index
+-> Query Retrieval
+-> Prompt Builder（历史经验 + Skill + 当前仓库事实）
+-> LLM Planner
+-> Restricted Tools 执行
+-> Validation
+   -> 通过：Final Report
+   -> 失败：Error Analysis
+      -> 错误再检索 -> 修复计划 -> 再执行与验证
+      -> 重试耗尽：Rollback -> Final Report
 ```
 
 ## 快速开始
+
+[演示demo任务介绍](docs/demo_task.md)
 
 在仓库根目录运行，默认使用 DeepSeek + BGE-M3，并包含历史对话抽取：
 
@@ -47,37 +42,6 @@ python -m algo_rag_demo.cli --config configs/deepseek_bge_m3.json run \
 
 也可以运行 `bash scripts/run_demo.sh`。首次需要下载 BGE-M3；
 已有本地模型时可以通过 embedding 配置指向本地目录。
-
-示例任务是将 LegacyRanker 替换为 NeuralScorer，保留下游接口与旧算法回退。
-代理编辑运行目录中的项目副本。验证实际检查接口字段、算法启用、分数与排序、
-空输入、旧算法回退。首次验证通过就结束；失败才进入错误检索和重试，
-最多执行三轮，最终失败会回滚并以非零退出码结束。结果由实际模型输出与测试决定。
-
-## 运行产物
-
-```text
-outputs/runs/<timestamp>-algorithm-upgrade-<id>/
-  conversations/        本次历史对话
-  cases/                LLM 抽取的结构化 Case
-  knowledge/chunks.json
-  index/                向量索引与元数据
-  workspace/            实际修改和验证的项目副本
-  checkpoint/           初始可编辑文件与恢复清单
-  task.json
-  attempts/01/
-    query.json
-    retrieval.json
-    prompt.md
-    plan.json
-    execution.json
-    validation.json
-    error_analysis.json  仅失败轮次生成
-  final_report.json      success / rolled_back / rollback_failed / failed
-```
-
-Top-K 排序单位是 Chunk，多个 Chunk 可能来自同一 Case；case_path、case_id 和
-source 可以回溯 Case 与历史对话。Chunk 按 Case Schema 的任务、约束、解决方案分组，
-不是额外使用一个 LLM 自动切分。
 
 ## 自定义数据与模型
 
