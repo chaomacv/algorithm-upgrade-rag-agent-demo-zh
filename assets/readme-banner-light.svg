@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="320" viewBox="0 0 1200 320" role="img" aria-labelledby="title description">
   <title id="title">RAG Planning Pipeline</title>
-  <desc id="description">让历史经验驱动规划、执行与验证。运行演示：bash scripts/run_demo.sh。</desc>
+  <desc id="description">让历史经验驱动任意 Agent 的规划、执行与验证。运行演示：bash scripts/run_demo.sh。</desc>
   <rect width="1200" height="320" fill="#ffffff"/>
   <g transform="translate(218 53)">
     <path d="M8 12h46l22 22v52a8 8 0 0 1-8 8H8a8 8 0 0 1-8-8V20a8 8 0 0 1 8-8Z" fill="#111827"/>
@@ -10,6 +10,6 @@
     <path d="m64 88 5 5 10-11" fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
   <text x="327" y="120" fill="#111827" font-family="Inter, Segoe UI, Arial, sans-serif" font-size="55" font-weight="700">RAG Planning Pipeline</text>
-  <text x="600" y="210" text-anchor="middle" fill="#24292f" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="36" font-weight="600">让历史经验驱动规划、执行与验证</text>
+  <text x="600" y="210" text-anchor="middle" fill="#24292f" font-family="Microsoft YaHei, PingFang SC, Noto Sans CJK SC, sans-serif" font-size="36" font-weight="600">让历史经验驱动任意 Agent 的规划、执行与验证</text>
   <text x="600" y="269" text-anchor="middle" font-family="Consolas, SFMono-Regular, monospace" font-size="24"><tspan fill="#59636e" font-family="Microsoft YaHei, PingFang SC, sans-serif">运行演示 </tspan><tspan fill="#087f5b">bash scripts/run_demo.sh</tspan></text>
 </svg>
