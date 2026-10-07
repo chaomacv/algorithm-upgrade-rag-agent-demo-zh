@@ -1,7 +1,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="assets/readme-banner-dark.svg">
-    <img src="assets/readme-banner-light.svg" alt="RAG Planning Pipeline：让历史经验驱动规划、执行与验证。运行演示：bash scripts/run_demo.sh" width="1200">
+    <img src="assets/readme-banner-light.svg" alt="RAG Planning Pipeline：让历史经验驱动任意agent规划、执行与验证。运行演示：bash scripts/run_demo.sh" width="1200">
   </picture>
 </p>
 
