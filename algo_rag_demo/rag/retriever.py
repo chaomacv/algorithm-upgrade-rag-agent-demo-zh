@@ -10,10 +10,16 @@ from algo_rag_demo.utils.jsonio import read_json
 
 
 class Retriever:
-    def __init__(self, index_dir: Path = INDEX_DIR, provider_name: str = "mock") -> None:
+    def __init__(
+        self,
+        index_dir: Path = INDEX_DIR,
+        provider_name: str = "mock",
+        case_dir: Path = CASE_DIR,
+    ) -> None:
         """Load the vector index, metadata, and query embedding provider."""
         # Retrieval must use the same provider family that built the index.
         self.index_dir = index_dir
+        self.case_dir = case_dir
         self.provider = get_embedding_provider(provider_name)
         self.metadata = read_json(index_dir / "metadata.json")
         self.index = self._load_index()
@@ -69,7 +75,7 @@ class Retriever:
                     module=meta["module"],
                     final_status=meta["final_status"],
                     source=meta["source"],
-                    case_path=str(CASE_DIR / f"{meta['case_id']}.json"),
+                    case_path=str(self.case_dir / f"{meta['case_id']}.json"),
                 )
             )
             if len(results) >= top_k:

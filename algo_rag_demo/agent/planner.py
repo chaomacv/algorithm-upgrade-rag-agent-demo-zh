@@ -67,6 +67,54 @@ class MockPlanner:
         }
 
 
+class EvidencePlanner:
+    """Deterministic planner for custom dry-run workflows."""
+
+    def plan(self, task: str, results: List[RetrievalResult]) -> Dict[str, object]:
+        """Create a generic evidence-based plan without assuming the DRE demo project."""
+        # This planner is intentionally dry-run friendly: it explains next steps
+        # but does not emit demo-specific patch instructions.
+        modules = sorted({item.module for item in results})
+        return {
+            "task_understanding": {
+                "task": task,
+                "candidate_modules": modules,
+                "mode": "custom_dry_run",
+            },
+            "retrieved_experience_used": [
+                f"{item.chunk_id}: {item.text[:120]}" for item in results
+            ],
+            "files_to_inspect": [],
+            "plan": [
+                "Read the top retrieved historical cases and identify reusable constraints.",
+                "Map the task-specific risks to the current target repository.",
+                "Inspect the target module interfaces before editing code.",
+                "Create a checkpoint or rollback plan before mutation.",
+                "Apply the smallest compatible change.",
+                "Run interface, runtime, regression, and rollback validation.",
+            ],
+            "validation_plan": [
+                "Verify public output schema remains compatible.",
+                "Run the target repository's normal test command.",
+                "Check runtime evidence that the new behavior is active.",
+                "Verify rollback or feature-flag path.",
+            ],
+            "rollback_plan": [
+                "Keep a pre-change checkpoint.",
+                "Record every modified file.",
+                "Restore checkpoint if validation fails.",
+            ],
+            "executable_plan": {
+                "steps": [
+                    {
+                        "type": "dry_run",
+                        "reason": "Custom mode only generates a plan; execution requires a project-specific ToolRegistry.",
+                    }
+                ]
+            },
+        }
+
+
 class LLMPlanner:
     def __init__(self, provider: object) -> None:
         """Store the provider-neutral chat backend used for planning."""

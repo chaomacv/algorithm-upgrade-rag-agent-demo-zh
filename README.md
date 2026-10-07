@@ -40,6 +40,15 @@ bash scripts/run_teaching_demo.sh
 -> 验证失败 -> 错误再检索 -> 修复计划 -> 再执行 -> SUCCESS
 ```
 
+如果你想用自己的结构化 Case 跑通“检索 + 规划 + 报告”链路：
+
+```bash
+python -m algo_rag_demo.cli run-custom \
+  --case-dir examples/custom_data/cases \
+  --task-file examples/custom_data/task.txt \
+  --repository-facts examples/custom_data/repository_facts.txt
+```
+
 ## 文档导航
 
 | 模块 | 适合读者 | 内容 |
@@ -47,7 +56,7 @@ bash scripts/run_teaching_demo.sh
 | [项目背景与问题](docs/project_overview.md) | 第一次了解项目的人 | 为什么算法替换会失败，示例场景是什么 |
 | [Teaching Demo](docs/01_teaching_demo.md) | 想快速跑通的人 | 无 API、无网络的一键演示 |
 | [DeepSeek + BGE-M3](docs/02_live_deepseek_bge.md) | 想接真实模型的人 | DeepSeek Planner 和 BGE-M3 Embedding |
-| [复用架构](docs/03_architecture_for_reuse.md) | 想改造成自己项目的人 | 哪些代码可复用，哪些只是教学剧情 |
+| [自定义实战入口](docs/03_architecture_for_reuse.md) | 想放入自己数据直接跑的人 | 自定义 Case、任务、检索、计划和报告 |
 | [Case 与 Chunk](docs/case_schema.md) | 关注知识结构的人 | Case Schema 和 Chunk 设计 |
 | [RAG Pipeline](docs/rag_pipeline.md) | 关注检索链路的人 | 从 chunk 到 index 再到 retrieval |
 | [命令手册](docs/commands.md) | 需要实际操作的人 | 构建索引、搜索、运行 demo、DeepSeek 抽取 |
@@ -80,6 +89,7 @@ README
 ```text
 README
 -> docs/03_architecture_for_reuse.md
+-> examples/custom_data/
 -> docs/case_schema.md
 -> docs/rag_pipeline.md
 -> CONTRIBUTING.md

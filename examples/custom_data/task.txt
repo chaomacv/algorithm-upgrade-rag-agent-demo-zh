@@ -1,0 +1,1 @@
+Replace the legacy ranking module with the new scoring module while keeping downstream metadata, configuration, runtime validation, and rollback behavior compatible.

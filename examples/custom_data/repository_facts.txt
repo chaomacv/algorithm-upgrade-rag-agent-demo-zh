@@ -1,0 +1,5 @@
+Target repository facts for the custom dry run:
+- The target module is a ranking stage inside a larger pipeline.
+- Downstream consumers require stable metadata fields.
+- Configuration controls which algorithm implementation is active.
+- Validation should include interface checks, runtime evidence, and rollback readiness.

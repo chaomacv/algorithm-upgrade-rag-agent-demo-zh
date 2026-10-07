@@ -18,22 +18,45 @@ def load_cases(case_dir: Path = CASE_DIR) -> List[EngineeringCase]:
 
 def build_index(provider_name: str = "mock") -> Tuple[int, int, int]:
     """Build chunks, embeddings, and a FAISS-compatible index."""
+    # The default index uses the repository's bundled synthetic examples.
+    return build_index_from_cases(
+        provider_name=provider_name,
+        case_dir=CASE_DIR,
+        knowledge_dir=KNOWLEDGE_DIR,
+        index_dir=INDEX_DIR,
+    )
+
+
+def build_index_from_cases(
+    provider_name: str = "mock",
+    case_dir: Path = CASE_DIR,
+    knowledge_dir: Path = KNOWLEDGE_DIR,
+    index_dir: Path = INDEX_DIR,
+) -> Tuple[int, int, int]:
+    """Build chunks, embeddings, and an index from a caller-selected case directory."""
     # chunks.json is kept as a readable audit artifact before vectorization.
     provider = get_embedding_provider(provider_name)
-    cases = load_cases()
+    cases = load_cases(case_dir)
+    if not cases:
+        raise ValueError(f"No CASE_*.json files found in {case_dir}")
     chunks = chunk_cases(cases)
-    KNOWLEDGE_DIR.mkdir(parents=True, exist_ok=True)
-    write_json(KNOWLEDGE_DIR / "chunks.json", [model_to_dict(chunk) for chunk in chunks])
+    knowledge_dir.mkdir(parents=True, exist_ok=True)
+    write_json(knowledge_dir / "chunks.json", [model_to_dict(chunk) for chunk in chunks])
     texts = [chunk.text for chunk in chunks]
     vectors = provider.encode_documents(texts)
-    save_index(vectors, chunks, provider_name)
+    save_index(vectors, chunks, provider_name, index_dir)
     return len(cases), len(chunks), int(vectors.shape[1])
 
 
-def save_index(vectors: np.ndarray, chunks: List[KnowledgeChunk], provider_name: str) -> None:
+def save_index(
+    vectors: np.ndarray,
+    chunks: List[KnowledgeChunk],
+    provider_name: str,
+    index_dir: Path = INDEX_DIR,
+) -> None:
     """Persist vectors and metadata for later retrieval."""
     # Metadata maps vector row ids back to chunk and case identities.
-    INDEX_DIR.mkdir(parents=True, exist_ok=True)
+    index_dir.mkdir(parents=True, exist_ok=True)
     metadata: Dict[str, Dict[str, object]] = {
         str(i): model_to_dict(chunk) for i, chunk in enumerate(chunks)
     }
@@ -44,10 +67,10 @@ def save_index(vectors: np.ndarray, chunks: List[KnowledgeChunk], provider_name:
 
         index = faiss.IndexFlatIP(int(vectors.shape[1]))
         index.add(vectors.astype("float32"))
-        faiss.write_index(index, str(INDEX_DIR / "cases.index"))
+        faiss.write_index(index, str(index_dir / "cases.index"))
     except Exception:
-        with (INDEX_DIR / "cases.index").open("wb") as handle:
+        with (index_dir / "cases.index").open("wb") as handle:
             np.save(handle, vectors.astype("float32"))
 
-    write_json(INDEX_DIR / "metadata.json", metadata)
+    write_json(index_dir / "metadata.json", metadata)
 

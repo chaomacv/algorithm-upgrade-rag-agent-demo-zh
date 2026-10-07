@@ -1,0 +1,59 @@
+{
+  "case_id": "CASE_CUSTOM_001",
+  "module": "Ranking",
+  "task": "Replace legacy ranking module with a new scoring module",
+  "old_algorithm": "LegacyRanker",
+  "new_algorithm": "NeuralScorer",
+  "constraints": {
+    "interface": [
+      "Keep downstream metadata schema stable",
+      "Preserve confidence and reason fields for consumers"
+    ],
+    "engineering": [
+      "Use configuration to switch the active algorithm",
+      "Keep rollback path available until runtime validation passes"
+    ]
+  },
+  "steps": [
+    "Inspect the ranking module entry point",
+    "Compare old and new algorithm output schema",
+    "Add an adapter if the new scorer omits required metadata",
+    "Switch configuration to the new scorer",
+    "Run interface, runtime, configuration, and rollback validation"
+  ],
+  "problems": [
+    {
+      "stage": "first replacement",
+      "symptom": "metadata.reason is missing in downstream validation",
+      "root_cause": "The new scorer returned a different metadata shape"
+    },
+    {
+      "stage": "runtime validation",
+      "symptom": "runtime evidence still reports LegacyRanker",
+      "root_cause": "The configuration switch was not updated"
+    }
+  ],
+  "solutions": [
+    {
+      "problem": "metadata schema mismatch",
+      "solution": "Add an adapter that preserves the metadata contract expected by downstream stages"
+    },
+    {
+      "problem": "old algorithm still active",
+      "solution": "Update configuration and verify runtime metadata shows the new scorer"
+    }
+  ],
+  "validation": {
+    "interface": "passed",
+    "runtime": "passed",
+    "configuration": "passed",
+    "rollback": "passed"
+  },
+  "final_status": "success",
+  "reusable_experience": [
+    "Do not declare algorithm replacement complete until runtime metadata proves the new algorithm is active",
+    "Treat metadata schema compatibility as part of the public interface",
+    "Keep rollback ready while validating the new implementation"
+  ],
+  "source_conversation_id": "CONV_CUSTOM_001"
+}

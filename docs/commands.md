@@ -35,6 +35,21 @@ python -m algo_rag_demo.cli search "Replace DRE while keeping downstream interfa
 python -m algo_rag_demo.cli demo-failure
 ```
 
+运行自定义数据实战入口：
+
+```bash
+bash scripts/run_custom_demo.sh
+```
+
+等价 CLI：
+
+```bash
+python -m algo_rag_demo.cli run-custom \
+  --case-dir examples/custom_data/cases \
+  --task-file examples/custom_data/task.txt \
+  --repository-facts examples/custom_data/repository_facts.txt
+```
+
 运行测试：
 
 ```bash
