@@ -206,7 +206,8 @@ def _extract_raw_dir_to_cases(args: argparse.Namespace, output_case_dir: Path) -
 
 def cmd_run_custom(args: argparse.Namespace) -> None:
     """Run the reusable RAG-to-plan workflow on caller-provided cases."""
-    # This path is intentionally dry-run by default and does not mutate a target repository.
+    # This is the reusable path for reader-provided data. It is intentionally
+    # dry-run by default and does not mutate a target repository.
     task = _load_task(args)
     run_dir = new_run_dir("custom")
     case_dir = (
@@ -361,7 +362,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument("task")
     p.add_argument("--provider", default="mock", choices=["mock", "bge-m3"])
     p.set_defaults(func=cmd_build_prompt)
-    p = sub.add_parser("run-custom")
+    p = sub.add_parser("run-custom", help="run RAG retrieval and planning on caller-provided case data")
     p.add_argument("--task", help="Task text to retrieve and plan for")
     p.add_argument("--task-file", help="Path to a text file containing the task")
     p.add_argument("--case-dir", default=str(EXAMPLES_DIR / "custom_data" / "cases"))

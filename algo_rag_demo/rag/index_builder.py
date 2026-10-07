@@ -34,7 +34,8 @@ def build_index_from_cases(
     index_dir: Path = INDEX_DIR,
 ) -> Tuple[int, int, int]:
     """Build chunks, embeddings, and an index from a caller-selected case directory."""
-    # chunks.json is kept as a readable audit artifact before vectorization.
+    # Custom runs pass their own case, knowledge, and index directories here so
+    # generated artifacts stay separate from the bundled teaching demo.
     provider = get_embedding_provider(provider_name)
     cases = load_cases(case_dir)
     if not cases:

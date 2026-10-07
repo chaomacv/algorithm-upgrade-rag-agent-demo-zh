@@ -19,6 +19,7 @@ class Retriever:
         """Load the vector index, metadata, and query embedding provider."""
         # Retrieval must use the same provider family that built the index.
         self.index_dir = index_dir
+        # case_dir is stored so custom runs can point results back to user data.
         self.case_dir = case_dir
         self.provider = get_embedding_provider(provider_name)
         self.metadata = read_json(index_dir / "metadata.json")
