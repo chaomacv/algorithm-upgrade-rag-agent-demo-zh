@@ -73,7 +73,7 @@ class EvidencePlanner:
     def plan(self, task: str, results: List[RetrievalResult]) -> Dict[str, object]:
         """Create a generic evidence-based plan without assuming the DRE demo project."""
         # This planner is intentionally dry-run friendly: it explains next steps
-        # but does not emit demo-specific patch instructions.
+        # but does not emit demo-specific patch instructions or mutate files.
         modules = sorted({item.module for item in results})
         return {
             "task_understanding": {
