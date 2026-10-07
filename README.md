@@ -73,6 +73,10 @@ tests/              单元测试和流程测试
 outputs/            生成的索引和运行日志，不提交到 GitHub
 ```
 
+## 文件怎么读
+
+如果只是想看懂项目，先读 `README.md` 和 `docs/`。如果想放入自己的数据，直接看 `examples/custom_data/` 和 `docs/03_architecture_for_reuse.md`。如果想改代码能力，再进入 `algo_rag_demo/`。
+
 ## 两条使用路线
 
 教学讲解优先看：

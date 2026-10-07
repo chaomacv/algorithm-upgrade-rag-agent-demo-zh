@@ -1,5 +1,7 @@
 # 命令手册
 
+这份文档只放可直接复制运行的命令。概念解释放在 `project_overview.md`、`case_schema.md` 和 `03_architecture_for_reuse.md`。
+
 ## 低门槛教学版
 
 ```bash

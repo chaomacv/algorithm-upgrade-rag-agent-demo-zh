@@ -62,6 +62,8 @@ examples/custom_data/
 - `repository_facts.txt`：当前项目的事实说明，可选但推荐。
 - `cases/CASE_*.json`：历史经验 Case。
 
+这三个文件就是自定义实战入口的最小输入。项目会在每次运行时生成独立的 `outputs/runs/<timestamp>-custom/`，所以你可以反复试不同任务和不同 Case，不会覆盖原始数据。
+
 ## Case 文件格式
 
 每个 `CASE_*.json` 都应该符合 `EngineeringCase`：
