@@ -2,6 +2,7 @@
 set -euo pipefail
 
 echo "[custom-demo] provider=mock planner=evidence"
+# This script is the lowest-friction smoke test for reader-provided case data.
 python -m pytest -q
 python -m algo_rag_demo.cli run-custom \
   --case-dir examples/custom_data/cases \

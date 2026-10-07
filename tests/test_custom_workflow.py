@@ -8,6 +8,7 @@ from algo_rag_demo.rag.retriever import Retriever
 
 def test_custom_case_builds_index_and_plan():
     """Verify custom cases can build a run-local index and produce a generic plan."""
+    # This test guards the public "bring your own case data" entrypoint.
     case_dir = Path("examples/custom_data/cases")
     with TemporaryDirectory() as temporary:
         root = Path(temporary)
